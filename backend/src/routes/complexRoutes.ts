@@ -371,16 +371,16 @@ router.post('/create-test-complex', async (req, res) => {
           const basePrice = 50000 + (area - 59) * 800 // 59㎡: 5억, 135㎡: 11억 정도
           // ±30% 랜덤 변동
           const variation = (Math.random() * 0.6 - 0.3)
-          price = Math.floor((basePrice + basePrice * variation) * 100)
+          price = Math.floor(basePrice + basePrice * variation)
           
           // 최소 5억, 최대 15억으로 제한
-          price = Math.max(50000 * 100, Math.min(150000 * 100, price))
+          price = Math.max(50000, Math.min(150000, price))
         } else if (tradetype === '전세') {
           // 전세: 3억 ~ 10억
           const basePrice = 30000 + (area - 59) * 500
           const variation = (Math.random() * 0.6 - 0.3)
-          price = Math.floor((basePrice + basePrice * variation) * 100)
-          price = Math.max(30000 * 100, Math.min(100000 * 100, price))
+          price = Math.floor(basePrice + basePrice * variation)
+          price = Math.max(30000, Math.min(100000, price))
         } else {
           // 월세: 500 ~ 3000만원
           const basePrice = 500 + (area - 59) * 20

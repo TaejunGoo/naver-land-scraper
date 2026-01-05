@@ -384,7 +384,7 @@ export default function ComplexList() {
                     <span className="font-semibold text-sm">{yearsSinceApproval}</span>
                   </div>
                 </div>
-                <div className="py-2 border-b border-slate-100 text-xs">
+                <div className="py-2 text-xs">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-muted-foreground">📊 현재 매물</span>
                     <span className="font-bold text-sm text-blue-600">{complex.todayListingCount || 0}개</span>
