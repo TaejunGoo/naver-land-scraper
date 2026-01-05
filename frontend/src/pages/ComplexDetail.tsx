@@ -18,7 +18,7 @@ export default function ComplexDetail() {
   const [sortBy, setSortBy] = useState<string>("scrapedAt");
   const [sortOrder, setSortOrder] = useState<string>("desc");
   const [selectedTradeTypes, setSelectedTradeTypes] = useState<Set<string>>(
-    new Set(["매매", "전세", "월세"])
+    new Set(["매매"])
   );
   const [tableStartDate, setTableStartDate] = useState<string>(() => {
     const end = new Date();

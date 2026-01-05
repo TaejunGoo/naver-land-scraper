@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 
 interface ListingFiltersProps {
@@ -27,6 +28,57 @@ export function ListingFilters({
   handleTradeTypeChange,
   handleAreaChange,
 }: ListingFiltersProps) {
+  const formatDate = (d: Date) => d.toISOString().split("T")[0];
+
+  const getDaysRange = (days: number) => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - days);
+    return { start: formatDate(start), end: formatDate(end) };
+  };
+
+  const getMonthsRange = (months: number) => {
+    const end = new Date();
+    const start = new Date();
+    start.setMonth(end.getMonth() - months);
+    return { start: formatDate(start), end: formatDate(end) };
+  };
+
+  const {
+    isAllActive,
+    isTodayActive,
+    isWeekActive,
+    isOneMonthActive,
+    isThreeMonthsActive,
+  } = useMemo(() => {
+    const allActive = !tableStartDate && !tableEndDate;
+
+    const today = formatDate(new Date());
+    const todayActive = tableStartDate === today && tableEndDate === today;
+
+    const weekRange = getDaysRange(7);
+    const weekActive =
+      tableStartDate === weekRange.start && tableEndDate === weekRange.end;
+
+    const oneMonthRange = getMonthsRange(1);
+    const oneMonthActive =
+      tableStartDate === oneMonthRange.start &&
+      tableEndDate === oneMonthRange.end;
+
+    const threeMonthsRange = getMonthsRange(3);
+    const threeMonthsActive =
+      tableStartDate === threeMonthsRange.start &&
+      tableEndDate === threeMonthsRange.end;
+
+    return {
+      isAllActive: allActive,
+      isTodayActive: todayActive,
+      isWeekActive: weekActive,
+      isOneMonthActive: oneMonthActive,
+      isThreeMonthsActive: threeMonthsActive,
+    };
+  }, [tableStartDate, tableEndDate]);
+
   return (
     <div className="p-4 bg-muted rounded-lg space-y-4">
       <div className="flex flex-wrap gap-6">
@@ -69,89 +121,102 @@ export function ListingFilters({
         {/* 조회 기간 필터 */}
         <div>
           <h4 className="text-sm font-medium mb-2">조회 기간 (수집일 기준)</h4>
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1">
+          <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 p-1">
+            <div className="flex items-center gap-1">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => {
                   setTableStartDate("");
                   setTableEndDate("");
                 }}
-                className={`h-7 px-2 text-xs ${
-                  !tableStartDate && !tableEndDate ? "bg-slate-100" : ""
+                className={`h-7 px-2 text-xs font-medium ${
+                  isAllActive
+                    ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                    : ""
                 }`}
               >
                 전체
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => {
-                  const today = new Date().toISOString().split("T")[0];
+                  const today = formatDate(new Date());
                   setTableStartDate(today);
                   setTableEndDate(today);
                 }}
-                className="h-7 px-2 text-xs"
+                className={`h-7 px-2 text-xs font-medium ${
+                  isTodayActive
+                    ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                    : ""
+                }`}
               >
                 오늘
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => {
-                  const end = new Date();
-                  const start = new Date();
-                  start.setDate(end.getDate() - 7);
-                  setTableStartDate(start.toISOString().split("T")[0]);
-                  setTableEndDate(end.toISOString().split("T")[0]);
+                  const range = getDaysRange(7);
+                  setTableStartDate(range.start);
+                  setTableEndDate(range.end);
                 }}
-                className="h-7 px-2 text-xs"
+                className={`h-7 px-2 text-xs font-medium ${
+                  isWeekActive
+                    ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                    : ""
+                }`}
               >
                 1주일
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => {
-                  const end = new Date();
-                  const start = new Date();
-                  start.setMonth(end.getMonth() - 1);
-                  setTableStartDate(start.toISOString().split("T")[0]);
-                  setTableEndDate(end.toISOString().split("T")[0]);
+                  const range = getMonthsRange(1);
+                  setTableStartDate(range.start);
+                  setTableEndDate(range.end);
                 }}
-                className="h-7 px-2 text-xs"
+                className={`h-7 px-2 text-xs font-medium ${
+                  isOneMonthActive
+                    ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                    : ""
+                }`}
               >
                 1개월
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => {
-                  const end = new Date();
-                  const start = new Date();
-                  start.setMonth(end.getMonth() - 3);
-                  setTableStartDate(start.toISOString().split("T")[0]);
-                  setTableEndDate(end.toISOString().split("T")[0]);
+                  const range = getMonthsRange(3);
+                  setTableStartDate(range.start);
+                  setTableEndDate(range.end);
                 }}
-                className="h-7 px-2 text-xs"
+                className={`h-7 px-2 text-xs font-medium ${
+                  isThreeMonthsActive
+                    ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                    : ""
+                }`}
               >
                 3개월
               </Button>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
+            <div className="flex items-center gap-1">
               <input
                 type="date"
                 value={tableStartDate}
                 onChange={(e) => setTableStartDate(e.target.value)}
-                className="text-sm border border-slate-300 rounded px-2 py-1"
+                className="text-xs border border-slate-200 rounded px-1 py-0.5 bg-transparent"
               />
-              <span className="text-slate-500">~</span>
+              <span className="text-xs text-slate-400">~</span>
               <input
                 type="date"
                 value={tableEndDate}
                 onChange={(e) => setTableEndDate(e.target.value)}
-                className="text-sm border border-slate-300 rounded px-2 py-1"
+                className="text-xs border border-slate-200 rounded px-1 py-0.5 bg-transparent"
               />
             </div>
           </div>
