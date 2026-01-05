@@ -67,6 +67,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           } else if (entry.dataKey === 'median' || label.includes('중간')) {
             icon = '📈'
             label = '중간가'
+          } else if (entry.dataKey === 'avgPyeong' || label.includes('평단가')) {
+            icon = '📐'
+            label = '평단가'
           } else if (label.includes('최고')) {
             icon = '🔺'
           } else if (label.includes('최저')) {
@@ -130,8 +133,19 @@ export default function ComplexDetail() {
   const scrollPositionRef = useRef<number>(0)
 
   // 그래프 설정 상태
-  const [chartDays, setChartDays] = useState(30) // 7, 30, 90, 180, 365
+  const [chartStartDate, setChartStartDate] = useState<string>(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 30)
+    return d.toISOString().split('T')[0]
+  })
+  const [chartEndDate, setChartEndDate] = useState<string>(() => {
+    return new Date().toISOString().split('T')[0]
+  })
   const [chartTradeType, setChartTradeType] = useState<string>('매매') // specific tradetype
+
+  // 테이블 필터 상태
+  const [tableStartDate, setTableStartDate] = useState<string>('')
+  const [tableEndDate, setTableEndDate] = useState<string>('')
 
   // 레이지 로딩 상태
   const [displayCount, setDisplayCount] = useState(50) // 처음에 50개만 표시
@@ -182,18 +196,53 @@ export default function ComplexDetail() {
   }, [areaOptions.length])
 
   const { data: listings, isLoading: listingsLoading } = useQuery({
-    queryKey: ['listings', id, Array.from(selectedTradeTypes), Array.from(selectedAreas), sortBy, sortOrder],
+    queryKey: ['listings', id, Array.from(selectedTradeTypes), Array.from(selectedAreas), sortBy, sortOrder, tableStartDate, tableEndDate],
     queryFn: async () => {
       // 1. 서버에서 데이터 가져오기 (거래유형, 정렬만 적용)
+      // pricePerPyeong 정렬일 경우 서버에는 기본 정렬(scrapedAt)을 요청하고 클라이언트에서 재정렬
+      const apiSortBy = sortBy === 'pricePerPyeong' ? 'scrapedAt' : sortBy
       const response = await listingApi.getByComplexId(Number(id), {
         tradetype: Array.from(selectedTradeTypes),
-        sortBy,
+        sortBy: apiSortBy,
         sortOrder
       })
       
-      const fetchedListings = response.data
+      let fetchedListings = response.data
 
-      // 2. 면적 필터링 (클라이언트 사이드)
+      // 2. 날짜 필터링
+      if (tableStartDate || tableEndDate) {
+        if (tableStartDate) {
+          const start = new Date(tableStartDate)
+          fetchedListings = fetchedListings.filter(l => new Date(l.scrapedAt) >= start)
+        }
+        if (tableEndDate) {
+          const end = new Date(tableEndDate)
+          end.setHours(23, 59, 59, 999)
+          fetchedListings = fetchedListings.filter(l => new Date(l.scrapedAt) <= end)
+        }
+      } else if (fetchedListings.length > 0) {
+        // 날짜 필터가 없을 경우 가장 최근 날짜의 데이터만 표시
+        const dates = fetchedListings.map((l: any) => new Date(l.scrapedAt).getTime())
+        const maxTimestamp = Math.max(...dates)
+        const maxDateStr = new Date(maxTimestamp).toISOString().split('T')[0]
+        fetchedListings = fetchedListings.filter((l: any) => l.scrapedAt.startsWith(maxDateStr))
+      }
+
+      // 3. 평단가 정렬 (클라이언트 사이드)
+      // API가 pricePerPyeong 정렬을 지원하지 않으므로 여기서 처리
+      if (sortBy === 'pricePerPyeong') {
+        fetchedListings.sort((a, b) => {
+          const getPyeongPrice = (l: any) => {
+            if (l.tradetype !== '매매' || !l.supplyArea) return 0
+            return l.price / (l.supplyArea / 3.3058)
+          }
+          const valA = getPyeongPrice(a)
+          const valB = getPyeongPrice(b)
+          return sortOrder === 'asc' ? valA - valB : valB - valA
+        })
+      }
+
+      // 4. 면적 필터링 (클라이언트 사이드)
       // 전체 선택되었거나 선택된게 없으면 필터링 건너뜀
       if (selectedAreas.size === 0 || selectedAreas.size === areaOptions.length) {
         return fetchedListings
@@ -242,16 +291,23 @@ export default function ComplexDetail() {
 
   // 현재 매물 카운트 계산
   const currentListingCounts = useMemo(() => {
-    if (!allListings) return null
+    if (!allListings || allListings.length === 0) return null
     
+    // 가장 최근 날짜 찾기
+    const dates = allListings.map(l => new Date(l.scrapedAt).getTime())
+    const maxTimestamp = Math.max(...dates)
+    const maxDateStr = new Date(maxTimestamp).toISOString().split('T')[0]
+    
+    const latestListings = allListings.filter(l => l.scrapedAt.startsWith(maxDateStr))
+
     const counts = {
-      total: allListings.length,
+      total: latestListings.length,
       sale: 0,
       jeonse: 0,
       rent: 0
     }
     
-    allListings.forEach(listing => {
+    latestListings.forEach(listing => {
       if (listing.tradetype === '매매') counts.sale++
       else if (listing.tradetype === '전세') counts.jeonse++
       else if (listing.tradetype === '월세') counts.rent++
@@ -264,32 +320,34 @@ export default function ComplexDetail() {
   const chartData = useMemo(() => {
     if (!allListings || allListings.length === 0) return []
 
-    const now = new Date()
-    const startDate = new Date()
-    startDate.setDate(startDate.getDate() - chartDays)
+    const start = new Date(chartStartDate)
+    const end = new Date(chartEndDate)
+    end.setHours(23, 59, 59, 999)
 
     // 거래유형 필터링 적용 (그래프 자체 필터)
     const filteredListings = allListings.filter(l => l.tradetype === chartTradeType)
 
     // 날짜별로 그룹화
-    const dateMap = new Map<string, number[]>()
+    const dateMap = new Map<string, { prices: number[] }>()
     
     filteredListings.forEach(listing => {
       const date = new Date(listing.scrapedAt)
-      if (date >= startDate && date <= now) {
+      if (date >= start && date <= end) {
         const dateStr = date.toISOString().split('T')[0]
         if (!dateMap.has(dateStr)) {
-          dateMap.set(dateStr, [])
+          dateMap.set(dateStr, { prices: [] })
         }
-        dateMap.get(dateStr)!.push(listing.price)
+        const data = dateMap.get(dateStr)!
+        data.prices.push(listing.price)
       }
     })
 
     // 날짜 범위 내 모든 날짜 생성 (빈 날짜도 포함)
     const result = []
-    for (let d = new Date(startDate); d <= now; d.setDate(d.getDate() + 1)) {
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const dateStr = d.toISOString().split('T')[0]
-      const prices = dateMap.get(dateStr) || []
+      const data = dateMap.get(dateStr) || { prices: [] }
+      const prices = data.prices
       
       if (prices.length > 0) {
         const sortedPrices = [...prices].sort((a, b) => a - b)
@@ -306,7 +364,7 @@ export default function ComplexDetail() {
     }
 
     return result
-  }, [allListings, chartDays, chartTradeType])
+  }, [allListings, chartStartDate, chartEndDate, chartTradeType])
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<Complex>) => complexApi.update(Number(id), data),
@@ -763,26 +821,46 @@ export default function ComplexDetail() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {/* 날짜 범위 선택 */}
-                    <div className="flex items-center gap-1.5 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 px-1 py-1">
-                      {[
-                        { value: 7, label: '7일' },
-                        { value: 30, label: '30일' },
-                        { value: 90, label: '90일' },
-                        { value: 180, label: '180일' },
-                        { value: 365, label: '1년' }
-                      ].map(({ value, label }) => (
-                        <button
-                          key={value}
-                          onClick={() => setChartDays(value)}
-                          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                            chartDays === value
-                              ? 'bg-blue-500 text-white shadow-sm'
-                              : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
+                    <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 p-1">
+                      <div className="flex items-center gap-1">
+                        {[
+                          { value: 7, label: '7일' },
+                          { value: 30, label: '30일' },
+                          { value: 90, label: '90일' },
+                          { value: 180, label: '6개월' },
+                          { value: 365, label: '1년' }
+                        ].map(({ value, label }) => (
+                          <button
+                            key={value}
+                            onClick={() => {
+                              const end = new Date()
+                              const start = new Date()
+                              start.setDate(end.getDate() - value)
+                              setChartEndDate(end.toISOString().split('T')[0])
+                              setChartStartDate(start.toISOString().split('T')[0])
+                            }}
+                            className="px-2 py-1 text-xs font-medium rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400"
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
+                      <div className="flex items-center gap-1">
+                        <input 
+                          type="date" 
+                          value={chartStartDate}
+                          onChange={(e) => setChartStartDate(e.target.value)}
+                          className="text-xs border border-slate-200 rounded px-1 py-0.5 bg-transparent"
+                        />
+                        <span className="text-xs text-slate-400">~</span>
+                        <input 
+                          type="date" 
+                          value={chartEndDate}
+                          onChange={(e) => setChartEndDate(e.target.value)}
+                          className="text-xs border border-slate-200 rounded px-1 py-0.5 bg-transparent"
+                        />
+                      </div>
                     </div>
 
                     {/* 거래유형 선택 */}
@@ -850,7 +928,6 @@ export default function ComplexDetail() {
                           yAxisId="right"
                           orientation="right"
                           tick={{ fontSize: 12, fill: '#64748b' }}
-                          tickFormatter={(value) => `${Math.round(value)}개`}
                           stroke="#cbd5e1"
                         />
                         <Tooltip content={<CustomTooltip />} />
@@ -939,36 +1016,71 @@ export default function ComplexDetail() {
 
           {/* 필터링 패널 */}
           <div className="p-4 bg-muted rounded-lg space-y-4">
-            {/* 거래유형 필터 */}
-            <div>
-              <h4 className="text-sm font-medium mb-2">거래유형</h4>
-              <div className="flex flex-wrap gap-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedTradeTypes.size === 3}
-                    onChange={() => {
-                      if (selectedTradeTypes.size === 3) {
-                        setSelectedTradeTypes(new Set())
-                      } else {
-                        setSelectedTradeTypes(new Set(['매매', '전세', '월세']))
-                      }
-                    }}
-                    className="cursor-pointer"
-                  />
-                  <span className="text-sm font-medium">전체</span>
-                </label>
-                {['매매', '전세', '월세'].map((type) => (
-                  <label key={type} className="flex items-center gap-2 cursor-pointer">
+            <div className="flex flex-wrap gap-6">
+              {/* 거래유형 필터 */}
+              <div>
+                <h4 className="text-sm font-medium mb-2">거래유형</h4>
+                <div className="flex flex-wrap gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={selectedTradeTypes.has(type)}
-                      onChange={() => handleTradeTypeChange(type)}
+                      checked={selectedTradeTypes.size === 3}
+                      onChange={() => {
+                        if (selectedTradeTypes.size === 3) {
+                          setSelectedTradeTypes(new Set())
+                        } else {
+                          setSelectedTradeTypes(new Set(['매매', '전세', '월세']))
+                        }
+                      }}
                       className="cursor-pointer"
                     />
-                    <span className="text-sm">{type}</span>
+                    <span className="text-sm font-medium">전체</span>
                   </label>
-                ))}
+                  {['매매', '전세', '월세'].map((type) => (
+                    <label key={type} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedTradeTypes.has(type)}
+                        onChange={() => handleTradeTypeChange(type)}
+                        className="cursor-pointer"
+                      />
+                      <span className="text-sm">{type}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* 조회 기간 필터 */}
+              <div>
+                <h4 className="text-sm font-medium mb-2">조회 기간 (수집일 기준)</h4>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="date" 
+                    value={tableStartDate}
+                    onChange={(e) => setTableStartDate(e.target.value)}
+                    className="text-sm border border-slate-300 rounded px-2 py-1"
+                  />
+                  <span className="text-slate-500">~</span>
+                  <input 
+                    type="date" 
+                    value={tableEndDate}
+                    onChange={(e) => setTableEndDate(e.target.value)}
+                    className="text-sm border border-slate-300 rounded px-2 py-1"
+                  />
+                  {(tableStartDate || tableEndDate) && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
+                        setTableStartDate('')
+                        setTableEndDate('')
+                      }}
+                      className="h-8 px-2 text-xs"
+                    >
+                      초기화
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1080,8 +1192,8 @@ export default function ComplexDetail() {
                       <th className="text-left py-2 px-4 cursor-pointer hover:bg-muted/50 select-none" onClick={() => handleSort('price')}>
                         가격 {sortBy === 'price' && (sortOrder === 'asc' ? '↑' : '↓')}
                       </th>
-                      <th className="text-left py-2 px-4">
-                        평단가
+                      <th className="text-left py-2 px-4 cursor-pointer hover:bg-muted/50 select-none" onClick={() => handleSort('pricePerPyeong')}>
+                        평단가 {sortBy === 'pricePerPyeong' && (sortOrder === 'asc' ? '↑' : '↓')}
                       </th>
                       <th className="text-left py-2 px-4 cursor-pointer hover:bg-muted/50 select-none" onClick={() => handleSort('area')}>
                         면적 {sortBy === 'area' && (sortOrder === 'asc' ? '↑' : '↓')}
