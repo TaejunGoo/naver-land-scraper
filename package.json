@@ -1,0 +1,20 @@
+{
+  "name": "naver-land-scraper",
+  "version": "1.0.0",
+  "description": "네이버 부동산 아파트 정보 크롤링 및 관리 툴",
+  "type": "module",
+  "scripts": {
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "build": "npm run build:backend && npm run build:frontend"
+  },
+  "keywords": ["naver", "real-estate", "scraper", "react", "shadcn"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
