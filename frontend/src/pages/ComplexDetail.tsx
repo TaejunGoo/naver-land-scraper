@@ -1,120 +1,154 @@
-import { useState, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, RefreshCw } from 'lucide-react'
-import { complexApi, listingApi, type Listing } from '@/lib/api'
-import { Button } from '@/components/ui/button'
-import { ComplexInfo } from '@/components/complex/ComplexInfo'
-import { ListingChart } from '@/components/complex/ListingChart'
-import { ListingFilters } from '@/components/complex/ListingFilters'
-import { ListingTable } from '@/components/complex/ListingTable'
+import { useState, useMemo, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, RefreshCw } from "lucide-react";
+import { complexApi, listingApi, type Listing } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { ComplexInfo } from "@/components/complex/ComplexInfo";
+import { ListingChart } from "@/components/complex/ListingChart";
+import { ListingFilters } from "@/components/complex/ListingFilters";
+import { ListingTable } from "@/components/complex/ListingTable";
 
 export default function ComplexDetail() {
-  const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
   // 상태 관리
-  const [sortBy, setSortBy] = useState<string>('scrapedAt')
-  const [sortOrder, setSortOrder] = useState<string>('desc')
-  const [selectedTradeTypes, setSelectedTradeTypes] = useState<Set<string>>(new Set(['매매', '전세', '월세']))
-  const [tableStartDate, setTableStartDate] = useState<string>('')
-  const [tableEndDate, setTableEndDate] = useState<string>('')
-  const [selectedAreas, setSelectedAreas] = useState<Set<string>>(new Set())
-  const [isScraping, setIsScraping] = useState(false)
+  const [sortBy, setSortBy] = useState<string>("scrapedAt");
+  const [sortOrder, setSortOrder] = useState<string>("desc");
+  const [selectedTradeTypes, setSelectedTradeTypes] = useState<Set<string>>(
+    new Set(["매매", "전세", "월세"])
+  );
+  const [tableStartDate, setTableStartDate] = useState<string>(() => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 7);
+    return start.toISOString().split("T")[0];
+  });
+  const [tableEndDate, setTableEndDate] = useState<string>(() => {
+    const end = new Date();
+    return end.toISOString().split("T")[0];
+  });
+  const [selectedAreas, setSelectedAreas] = useState<Set<string>>(new Set());
+  const [isScraping, setIsScraping] = useState(false);
 
   // 단지 정보 조회
   const { data: complex, isLoading: complexLoading } = useQuery({
-    queryKey: ['complex', id],
-    queryFn: () => complexApi.getById(Number(id)).then(res => res.data),
-    enabled: !!id
-  })
+    queryKey: ["complex", id],
+    queryFn: () => complexApi.getById(Number(id)).then((res) => res.data),
+    enabled: !!id,
+  });
 
   // 전체 매물 조회 (차트 및 면적 옵션용)
   const { data: allListings } = useQuery<Listing[]>({
-    queryKey: ['listings', id, 'all'],
-    queryFn: () => listingApi.getByComplexId(Number(id)).then(res => res.data),
-    enabled: !!id
-  })
+    queryKey: ["listings", id, "all"],
+    queryFn: () =>
+      listingApi.getByComplexId(Number(id)).then((res) => res.data),
+    enabled: !!id,
+  });
 
   // 면적 옵션 추출
   const areaOptions = useMemo(() => {
-    if (!allListings) return []
-    const areas = new Set(allListings.map(l => String(l.area)))
-    return Array.from(areas).sort((a, b) => parseFloat(a) - parseFloat(b))
-  }, [allListings])
+    if (!allListings) return [];
+    const areas = new Set(allListings.map((l) => String(l.area)));
+    return Array.from(areas).sort((a, b) => parseFloat(a) - parseFloat(b));
+  }, [allListings]);
+
+  // 최초 로드 시 모든 평형을 기본 선택
+  useEffect(() => {
+    if (areaOptions.length > 0 && selectedAreas.size === 0) {
+      setSelectedAreas(new Set(areaOptions));
+    }
+  }, [areaOptions, selectedAreas.size, setSelectedAreas]);
 
   // 필터링된 매물 조회 (테이블용)
   const { data: listings, isLoading: listingsLoading } = useQuery<Listing[]>({
-    queryKey: ['listings', id, sortBy, sortOrder, Array.from(selectedTradeTypes), tableStartDate, tableEndDate, Array.from(selectedAreas)],
+    queryKey: [
+      "listings",
+      id,
+      sortBy,
+      sortOrder,
+      Array.from(selectedTradeTypes),
+      tableStartDate,
+      tableEndDate,
+      Array.from(selectedAreas),
+    ],
     queryFn: async () => {
-      const response = await listingApi.getByComplexId(Number(id))
-      const data = response.data
-      
+      const response = await listingApi.getByComplexId(Number(id));
+      const data = response.data;
+
       return data
-        .filter(l => {
+        .filter((l) => {
           // 거래유형 필터
-          if (selectedTradeTypes.size > 0 && !selectedTradeTypes.has(l.tradetype)) return false
-          
+          if (
+            selectedTradeTypes.size > 0 &&
+            !selectedTradeTypes.has(l.tradetype)
+          )
+            return false;
+
           // 날짜 필터
-          const date = new Date(l.scrapedAt)
-          const dateStr = date.toISOString().split('T')[0]
-          
-          if (tableStartDate && dateStr < tableStartDate) return false
-          if (tableEndDate && dateStr > tableEndDate) return false
-          
+          const date = new Date(l.scrapedAt);
+          const dateStr = date.toISOString().split("T")[0];
+
+          if (tableStartDate && dateStr < tableStartDate) return false;
+          if (tableEndDate && dateStr > tableEndDate) return false;
+
           // 면적 필터
-          if (selectedAreas.size > 0 && !selectedAreas.has(String(l.area))) return false
-          
-          return true
+          if (selectedAreas.size > 0 && !selectedAreas.has(String(l.area)))
+            return false;
+
+          return true;
         })
         .sort((a, b) => {
-          const aVal = a[sortBy as keyof typeof a]
-          const bVal = b[sortBy as keyof typeof b]
-          
-          if (sortBy === 'pricePerPyeong') {
+          const aVal = a[sortBy as keyof typeof a];
+          const bVal = b[sortBy as keyof typeof b];
+
+          if (sortBy === "pricePerPyeong") {
             // 평단가 계산 후 정렬
             const getPyeongPrice = (item: any) => {
-              if (!item.supplyArea || item.tradetype !== '매매') return 0
-              return item.price / (item.supplyArea / 3.3058)
-            }
-            const aPrice = getPyeongPrice(a)
-            const bPrice = getPyeongPrice(b)
-            return sortOrder === 'asc' ? aPrice - bPrice : bPrice - aPrice
+              if (!item.supplyArea || item.tradetype !== "매매") return 0;
+              return item.price / (item.supplyArea / 3.3058);
+            };
+            const aPrice = getPyeongPrice(a);
+            const bPrice = getPyeongPrice(b);
+            return sortOrder === "asc" ? aPrice - bPrice : bPrice - aPrice;
           }
 
-          if (typeof aVal === 'string' && typeof bVal === 'string') {
-            return sortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+          if (typeof aVal === "string" && typeof bVal === "string") {
+            return sortOrder === "asc"
+              ? aVal.localeCompare(bVal)
+              : bVal.localeCompare(aVal);
           }
           // @ts-ignore
-          return sortOrder === 'asc' ? aVal - bVal : bVal - aVal
-        })
+          return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+        });
     },
-    enabled: !!id
-  })
+    enabled: !!id,
+  });
 
   // 현재 매물 현황 계산 (최신 날짜 기준)
   const currentListingCounts = useMemo(() => {
-    if (!allListings || allListings.length === 0) return null
+    if (!allListings || allListings.length === 0) return null;
 
     // 전체 데이터에서 가장 최신 날짜 찾기
-    const timestamps = allListings.map(l => new Date(l.scrapedAt).getTime())
-    const maxTimestamp = Math.max(...timestamps)
-    const maxDateStr = new Date(maxTimestamp).toISOString().split('T')[0]
+    const timestamps = allListings.map((l) => new Date(l.scrapedAt).getTime());
+    const maxTimestamp = Math.max(...timestamps);
+    const maxDateStr = new Date(maxTimestamp).toISOString().split("T")[0];
 
     // 최신 날짜의 데이터만 필터링
-    const latestListings = allListings.filter(l => {
-      const dateStr = new Date(l.scrapedAt).toISOString().split('T')[0]
-      return dateStr === maxDateStr
-    })
+    const latestListings = allListings.filter((l) => {
+      const dateStr = new Date(l.scrapedAt).toISOString().split("T")[0];
+      return dateStr === maxDateStr;
+    });
 
     return {
       total: latestListings.length,
-      sale: latestListings.filter(l => l.tradetype === '매매').length,
-      jeonse: latestListings.filter(l => l.tradetype === '전세').length,
-      rent: latestListings.filter(l => l.tradetype === '월세').length
-    }
-  }, [allListings])
+      sale: latestListings.filter((l) => l.tradetype === "매매").length,
+      jeonse: latestListings.filter((l) => l.tradetype === "전세").length,
+      rent: latestListings.filter((l) => l.tradetype === "월세").length,
+    };
+  }, [allListings]);
 
   // 매물 수집 뮤테이션
   const scrapeMutation = useMutation({
@@ -122,81 +156,87 @@ export default function ComplexDetail() {
     onMutate: () => setIsScraping(true),
     onSettled: () => setIsScraping(false),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['listings', id] })
-      alert('매물 수집이 완료되었습니다.')
+      queryClient.invalidateQueries({ queryKey: ["listings", id] });
+      alert("매물 수집이 완료되었습니다.");
     },
     onError: (error: any) => {
-      alert(`수집 실패: ${error.message}`)
-    }
-  })
+      alert(`수집 실패: ${error.message}`);
+    },
+  });
 
   const handleSort = (field: string) => {
     if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
-      setSortBy(field)
-      setSortOrder('desc')
+      setSortBy(field);
+      setSortOrder("desc");
     }
-  }
+  };
 
   const handleTradeTypeChange = (type: string) => {
-    const newTypes = new Set(selectedTradeTypes)
+    const newTypes = new Set(selectedTradeTypes);
     if (newTypes.has(type)) {
-      newTypes.delete(type)
+      newTypes.delete(type);
     } else {
-      newTypes.add(type)
+      newTypes.add(type);
     }
-    setSelectedTradeTypes(newTypes)
-  }
+    setSelectedTradeTypes(newTypes);
+  };
 
   const handleAreaChange = (area: string) => {
-    const newAreas = new Set(selectedAreas)
+    const newAreas = new Set(selectedAreas);
     if (newAreas.has(area)) {
-      newAreas.delete(area)
+      newAreas.delete(area);
     } else {
-      newAreas.add(area)
+      newAreas.add(area);
     }
-    setSelectedAreas(newAreas)
-  }
+    setSelectedAreas(newAreas);
+  };
 
   if (complexLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
       </div>
-    )
+    );
   }
 
-  if (!complex) return <div>단지를 찾을 수 없습니다.</div>
+  if (!complex) return <div>단지를 찾을 수 없습니다.</div>;
 
   return (
     <div className="max-w-7xl mx-auto p-4 space-y-6 pb-20">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={() => navigate('/')} className="pl-0 hover:pl-2 transition-all">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/")}
+          className="pl-0 hover:pl-2 transition-all"
+        >
           <ArrowLeft className="w-4 h-4 mr-2" />
           목록으로
         </Button>
         <div className="flex gap-2">
-          <Button 
-            onClick={() => scrapeMutation.mutate()} 
+          <Button
+            onClick={() => scrapeMutation.mutate()}
             disabled={isScraping}
             className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isScraping ? 'animate-spin' : ''}`} />
-            {isScraping ? '매물 수집 중...' : '매물 수집'}
+            <RefreshCw
+              className={`w-4 h-4 mr-2 ${isScraping ? "animate-spin" : ""}`}
+            />
+            {isScraping ? "매물 수집 중..." : "매물 수집"}
           </Button>
         </div>
       </div>
 
       {/* 단지 정보 */}
-      <ComplexInfo 
-        complex={complex} 
-        currentListingCounts={currentListingCounts} 
+      <ComplexInfo
+        complex={complex}
+        currentListingCounts={currentListingCounts}
       />
 
       {/* 차트 */}
-      <ListingChart 
+      <ListingChart
         allListings={allListings}
         selectedAreas={selectedAreas}
         handleAreaChange={handleAreaChange}
@@ -213,7 +253,7 @@ export default function ComplexDetail() {
         </div>
 
         {/* 필터 */}
-        <ListingFilters 
+        <ListingFilters
           selectedTradeTypes={selectedTradeTypes}
           setSelectedTradeTypes={setSelectedTradeTypes}
           tableStartDate={tableStartDate}
@@ -228,7 +268,7 @@ export default function ComplexDetail() {
         />
 
         {/* 테이블 */}
-        <ListingTable 
+        <ListingTable
           listings={listings}
           listingsLoading={listingsLoading}
           sortBy={sortBy}
@@ -238,5 +278,5 @@ export default function ComplexDetail() {
         />
       </div>
     </div>
-  )
+  );
 }

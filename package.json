@@ -7,11 +7,18 @@
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "init": "npm install && cd frontend && npm install && cd ../backend && npm install && npx prisma migrate dev && npx prisma generate",
     "build:frontend": "cd frontend && npm run build",
     "build:backend": "cd backend && npm run build",
     "build": "npm run build:backend && npm run build:frontend"
   },
-  "keywords": ["naver", "real-estate", "scraper", "react", "shadcn"],
+  "keywords": [
+    "naver",
+    "real-estate",
+    "scraper",
+    "react",
+    "shadcn"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
