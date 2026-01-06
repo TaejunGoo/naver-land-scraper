@@ -4,6 +4,17 @@ chcp 65001 >nul
 title 랜드브리핑(LandBriefing) 매니저
 cd /d %~dp0
 
+:: --- [추가] 선행 조건 체크 로직 ---
+echo [0/4] 시스템 환경 확인 중...
+node -v >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [에러] Node.js가 설치되어 있지 않습니다!
+    echo https://nodejs.org/ 에서 LTS 버전을 설치한 후 다시 실행해 주세요.
+    pause
+    exit
+)
+:: --------------------------------
+
 echo ==========================================
 echo    랜드브리핑(LandBriefing) 시작 중...
 echo ==========================================

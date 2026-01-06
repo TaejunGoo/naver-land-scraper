@@ -1,95 +1,72 @@
-# 네이버 부동산 크롤러
+# 랜드브리핑 (LandBriefing)
 
-React, Official shadcn/ui, Tailwind CSS 기반 네이버 부동산 아파트 정보 크롤링 및 시계열 관리 도구
+**네이버 부동산 데이터를 나만의 자산으로 관리하는 스마트 대시보드**
 
-## 주요 기능
+랜드브리핑은 네이버 부동산의 아파트 정보를 크롤링하여 시계열 데이터로 저장하고, 시세 변화를 한눈에 파악할 수 있도록 돕는 로컬 기반 데이터 관리 도구입니다.
 
-- **단지 관리**: 관심 아파트 단지 등록 및 관리 (등록 시 단지 상세정보 자동 수집)
-- **정보 크롤링**: 네이버 부동산 기반 단지 상세정보(세대수, 준공년도 등) 및 실시간 매물 데이터 수집
-- **데이터 시각화**: 수집된 매물 데이터를 바탕으로 기간별 가격 추이 차트 제공 (Recharts)
-- **스마트 필터링**: 거래유형(매매/전세/월세), 전용면적, 수집 기간별 매물 필터링
-- **정렬 기능**: 단지 목록 다중 정렬 (이름순, 세대수순, 연차순, 오늘 매물수순)
-- **전역 알림 시스템**: Zustand 기반의 통일된 Alert/Confirm UI (shadcn/ui Alert-Dialog)
-- **현지화 로직**: 모든 날짜와 시간 처리를 **대한민국 표준시(KST, UTC+9)** 기준으로 통일
+---
 
-## 기술 스택
+## ✨ 주요 기능
+
+- **통합 상세 정보 관리**: 관심 단지의 세대수, 준공년도, 지하철 노선, 단지 메모 등을 원클릭으로 수집 및 관리
+- **시계열 시세 차트**: 수집 누적 데이터 기반 매매/전세/월세 가격 변동 추이 시각화 (Recharts)
+- **데이터 백업 및 공유**: 수집된 전체 데이터를 `.db` 파일로 내보내거나 가져오기 (다른 유저와 데이터 팩 공유 가능)
+- **스마트 필터링 & 정렬**: 면적별, 거래유형별, 날짜별 필터와 다양한 정렬 기능 제공
+- **강력한 스크래핑**: Puppeteer Stealth 모드를 적용하여 봇 감지를 최소화한 안정적인 수집
+- **원클릭 실행기**: 별도의 터미널 명령어 없이 아이콘 클릭만으로 설치부터 실행까지 자동 완료
+
+## 🚀 시작하기 (가장 쉬운 방법)
+
+Windows 사용자라면 복잡한 명령어 없이 바로 시작할 수 있습니다.
+
+1. **선행 조건**: [Node.js (LTS)](https://nodejs.org/)가 설치되어 있어야 합니다.
+2. **실행**: 프로젝트 루트 폴더의 `LandBriefing.bat` 파일을 더블 클릭합니다.
+   - 최초 실행 시 필요한 라이브러리 설치와 데이터베이스 설정을 자동으로 진행합니다.
+   - 실행 후 브라우저에서 `http://localhost:5500`이 자동으로 열립니다.
+3. **팁**: `LandBriefing.bat` 파일의 바로가기를 바탕화면에 만들어 편리하게 사용하세요.
+
+## 🛠 기술 스택
 
 ### Frontend
 - **Framework**: React 18, Vite
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS, shadcn/ui (Official)
-- **State Management**: TanStack Query (v5), Zustand
-- **Visualization**: Recharts
-- **Routing**: React Router DOM
+- **UI Component**: shadcn/ui (Official), Tailwind CSS, Lucide React
+- **State**: TanStack Query (v5), Zustand (Global Alert & Header)
+- **Timezone**: **대한민국 표준시(KST, UTC+9)** 고정 처리
 
 ### Backend
 - **Runtime**: Node.js (Express)
-- **Language**: TypeScript
+- **Database**: SQLite (파일 기반 무설치 DB)
 - **ORM**: Prisma
-- **Database**: SQLite
-- **Scraping**: Puppeteer, Axios
+- **Scraping**: Puppeteer (Headless: "new", Stealth Patch)
 
-## 설치 및 실행
-
-### 1. 프로젝트 초기화 (한 번에 설치 및 DB 설정)
-
-루트 디렉토리에서 아래 명령어를 실행하면 프론트엔드/백엔드 의존성 설치와 데이터베이스 마이그레이션을 한 번에 마칠 수 있습니다.
-
-```bash
-npm run init
-```
-
-### 2. 수동 설치 (단계별 실행 시)
-
-```bash
-# 전체 의존성 설치 (Root, Frontend, Backend)
-npm install
-cd frontend && npm install
-cd ../backend && npm install
-
-# 데이터베이스 설정
-cd ../backend
-npx prisma migrate dev --name init
-npx prisma generate
-```
-
-### 3. 개발 서버 실행
-
-```bash
-# 루트 디렉토리에서 (Concurrently를 이용한 동시 실행)
-npm run dev
-```
-
-## 프로젝트 구조
+## 📁 프로젝트 구조
 
 ```
 naver-land-scraper/
-├── frontend/              # 프론트엔드 (React)
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── complex/   # 단지/매물 관련 도메인 컴포넌트
-│   │   │   └── ui/        # shadcn/ui 공통 컴포넌트
-│   │   ├── lib/           # KST 유틸리티, API 정의, Zustand 스토어
-│   │   └── pages/         # 리스트 및 상세 페이지
-├── backend/               # 백엔드 (Express)
-│   ├── src/
-│   │   ├── routes/        # 단지 및 매물 API 라우트
-│   │   ├── scrapers/      # Puppeteer 기반 네이버 부동산 스크래퍼
-│   │   └── db.ts          # Prisma Client 설정
-│   └── prisma/            # SQLite 스키마 및 마이그레이션 파일
-└── package.json           # 루트 설정 (Scripts: dev, build 등)
+├── LandBriefing.bat       # Windows 통합 실행기
+├── frontend/              # 프론트엔드 (React + Vite)
+│   ├── src/components/    # 도메인별 모듈화된 컴포넌트
+│   ├── src/lib/           # KST 유틸리티 및 API 정의
+│   └── dist/              # 빌드된 정적 파일 (서버가 직접 서빙)
+├── backend/               # 백엔드 (Express + Prisma)
+│   ├── src/scrapers/      # 네이버 부동산 스크래핑 엔진
+│   ├── src/routes/        # API 및 백업/복구 라우트
+│   └── prisma/            # SQLite 스키마 및 DB 파일 (dev.db)
+└── package.json           # 개발 및 통합 관리 설정
 ```
 
-## 사용 방법
+## 💾 데이터 백업 및 복구
 
-1. **단지 추가**: 메인 상단의 "단지 추가" 버튼으로 네이버 부동산 단지 ID(예: 12345)를 포함하여 등록합니다.
-2. **자동 수집**: 단지 등록 시 기본 상세 정보(연차, 세대수 등)가 자동으로 수집됩니다.
-3. **매물 수집**: 상세 페이지에서 "매물 수집" 버튼을 누르면 해당 시점의 모든 매물을 가져와 DB에 기록합니다.
-4. **추이 분석**: 여러 번 수집이 반복되면 차트 영역에서 가격 흐름을 한눈에 확인할 수 있습니다.
-5. **정렬 및 필터**: 상단 정렬 메뉴와 필터 도구를 사용하여 수천 개의 매물 중 원하는 데이터만 빠르게 골라냅니다.
+메인 화면 하단의 **[데이터 매니지먼트]** 섹션에서 다음 작업이 가능합니다.
 
-## 주의사항
+- **내보내기**: 지금까지 수집한 모든 단지 정보와 시세 데이터를 `.db` 파일로 저장합니다. 
+- **불러오기**: 다른 컴퓨터에서 사용하던 데이터나 친구가 공유해 준 데이터를 내 앱에 즉시 반영합니다.
 
-- 이 도구는 개인적인 학습 및 데이터 분석용으로 제작되었습니다.
-- 네이버 부동산 서비스에 부하를 줄 수 있는 과도한 크롤링(매초 반복 등)은 삼가해 주세요.
-- 자동화된 스크래핑 행위는 사이트 이용약관에 위배될 수 있으므로 주의가 필요합니다.
+## ⚠️ 주의사항
+
+- 이 도구는 **개인적인 학습 및 데이터 분석용**으로 제작되었습니다.
+- 네이버 부동산 서비스에 과도한 부하를 줄 경우 사이트 이용이 제한될 수 있으므로 주의해 주세요.
+- 비정상적인 대량 수집 행위는 관련 법령이나 서비스 이용약관에 저촉될 수 있습니다.
+
+## 📝 라이선스
+MIT License
