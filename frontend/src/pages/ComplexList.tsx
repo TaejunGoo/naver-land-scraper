@@ -332,7 +332,7 @@ export default function ComplexList() {
         />
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {sortedComplexes?.map((complex) => (
           <ComplexCard
             key={complex.id}

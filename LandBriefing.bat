@@ -54,16 +54,18 @@ cd ..
 echo.
 echo [4/4] 서버를 실행하고 브라우저를 엽니다...
 echo.
-echo 서버 주소: http://localhost:5000
+set APP_PORT=5500
+echo 서버 주소: http://localhost:%APP_PORT%
 echo DB 파일 위치: backend\prisma\dev.db
 echo.
 
 :: 서버 실행 (백그라운드)
-start /b cmd /c "cd backend && npm run dev"
+:: PORT 환경변수를 지정하여 빌드 모드 포트를 분리합니다.
+start /b cmd /c "cd backend && set PORT=%APP_PORT% && npm run dev"
 
 :: 브라우저 대기 및 실행
 timeout /t 5 >nul
-start http://localhost:5000
+start http://localhost:%APP_PORT%
 
 echo.
 echo ==========================================

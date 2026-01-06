@@ -226,7 +226,7 @@ export function ComplexInfo({
                 <label className="block text-sm font-medium mb-2">
                   지하철 호선
                 </label>
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-2 p-3 border rounded-md bg-slate-50">
+                <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-3 gap-2 p-3 border rounded-md bg-slate-50">
                   {SUBWAY_LINES.map((line) => (
                     <label
                       key={line}
