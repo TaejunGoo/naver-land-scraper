@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Beaker, RefreshCw, Plus, ArrowUpDown } from "lucide-react";
-import { Complex } from "@/lib/api";
 import {
   Select,
   SelectContent,

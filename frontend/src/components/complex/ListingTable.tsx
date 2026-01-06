@@ -14,13 +14,11 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { useAlertStore } from '@/lib/store'
-import { ArrowUpDown, Trash2, CheckSquare, Square } from 'lucide-react'
+import { ArrowUpDown, Trash2 } from 'lucide-react'
 
 interface ListingTableProps {
   listings: any[] | undefined
   listingsLoading: boolean
-  sortBy: string
-  sortOrder: string
   handleSort: (field: string) => void
   complexId: string
 }
@@ -28,8 +26,6 @@ interface ListingTableProps {
 export function ListingTable({
   listings,
   listingsLoading,
-  sortBy,
-  sortOrder,
   handleSort,
   complexId
 }: ListingTableProps) {

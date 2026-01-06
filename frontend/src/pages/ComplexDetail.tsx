@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, RefreshCw, Info } from "lucide-react";
 import { complexApi, listingApi, type Listing } from "@/lib/api";
@@ -10,11 +10,9 @@ import { ComplexInfo } from "@/components/complex/ComplexInfo";
 import { ListingChart } from "@/components/complex/ListingChart";
 import { ListingFilters } from "@/components/complex/ListingFilters";
 import { ListingTable } from "@/components/complex/ListingTable";
-import { Badge } from "@/components/ui/badge";
 
 export default function ComplexDetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const setHeader = useHeaderStore((state) => state.setHeader);
   const resetHeader = useHeaderStore((state) => state.resetHeader);
@@ -257,16 +255,6 @@ export default function ComplexDetail() {
     }
   };
 
-  const handleTradeTypeChange = (type: string) => {
-    const newTypes = new Set(selectedTradeTypes);
-    if (newTypes.has(type)) {
-      newTypes.delete(type);
-    } else {
-      newTypes.add(type);
-    }
-    setSelectedTradeTypes(newTypes);
-  };
-
   const handleAreaChange = (area: string) => {
     const newAreas = new Set(selectedAreas);
     if (newAreas.has(area)) {
@@ -328,7 +316,6 @@ export default function ComplexDetail() {
           selectedAreas={selectedAreas}
           setSelectedAreas={setSelectedAreas}
           areaOptions={areaOptions}
-          handleTradeTypeChange={handleTradeTypeChange}
           handleAreaChange={handleAreaChange}
         />
 
@@ -336,8 +323,6 @@ export default function ComplexDetail() {
         <ListingTable
           listings={listings}
           listingsLoading={listingsLoading}
-          sortBy={sortBy}
-          sortOrder={sortOrder}
           handleSort={handleSort}
           complexId={id!}
         />

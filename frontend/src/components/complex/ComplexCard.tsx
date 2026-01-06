@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Trash2, ExternalLink, Pencil } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import { Complex } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

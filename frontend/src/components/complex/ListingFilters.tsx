@@ -15,7 +15,6 @@ interface ListingFiltersProps {
   selectedAreas: Set<string>;
   setSelectedAreas: (areas: Set<string>) => void;
   areaOptions: string[];
-  handleTradeTypeChange: (type: string) => void;
   handleAreaChange: (area: string) => void;
 }
 
@@ -29,7 +28,6 @@ export function ListingFilters({
   selectedAreas,
   setSelectedAreas,
   areaOptions,
-  handleTradeTypeChange,
   handleAreaChange,
 }: ListingFiltersProps) {
   const getDaysRange = (days: number) => {

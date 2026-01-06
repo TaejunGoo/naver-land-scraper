@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
-import { BarChart3, Calendar as CalendarIcon, TrendingUp, TrendingDown } from "lucide-react";
+import { useState, useMemo } from "react";
+import { BarChart3, TrendingUp } from "lucide-react";
 import { formatPrice, formatDateKST, getTodayKST } from "@/lib/format";
 import {
   ComposedChart,
@@ -14,13 +14,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Button } from "@/components/ui/button";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Separator } from "@/components/ui/separator";
