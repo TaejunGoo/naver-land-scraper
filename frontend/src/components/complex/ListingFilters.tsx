@@ -1,5 +1,9 @@
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Separator } from "@/components/ui/separator";
+import { formatDateKST, getTodayKST } from "@/lib/format";
 
 interface ListingFiltersProps {
   selectedTradeTypes: Set<string>;
@@ -28,20 +32,18 @@ export function ListingFilters({
   handleTradeTypeChange,
   handleAreaChange,
 }: ListingFiltersProps) {
-  const formatDate = (d: Date) => d.toISOString().split("T")[0];
-
   const getDaysRange = (days: number) => {
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - days);
-    return { start: formatDate(start), end: formatDate(end) };
+    return { start: formatDateKST(start), end: formatDateKST(end) };
   };
 
   const getMonthsRange = (months: number) => {
     const end = new Date();
     const start = new Date();
     start.setMonth(end.getMonth() - months);
-    return { start: formatDate(start), end: formatDate(end) };
+    return { start: formatDateKST(start), end: formatDateKST(end) };
   };
 
   const {
@@ -53,7 +55,7 @@ export function ListingFilters({
   } = useMemo(() => {
     const allActive = !tableStartDate && !tableEndDate;
 
-    const today = formatDate(new Date());
+    const today = getTodayKST();
     const todayActive = tableStartDate === today && tableEndDate === today;
 
     const weekRange = getDaysRange(7);
@@ -80,186 +82,147 @@ export function ListingFilters({
   }, [tableStartDate, tableEndDate]);
 
   return (
-    <div className="p-4 bg-muted rounded-lg space-y-4">
-      <div className="flex flex-wrap gap-6">
-        {/* 거래유형 필터 */}
-        <div>
-          <h4 className="text-sm font-medium mb-2">거래유형</h4>
-          <div className="flex flex-wrap gap-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={selectedTradeTypes.size === 3}
-                onChange={() => {
-                  if (selectedTradeTypes.size === 3) {
-                    setSelectedTradeTypes(new Set());
-                  } else {
-                    setSelectedTradeTypes(new Set(["매매", "전세", "월세"]));
-                  }
-                }}
-                className="cursor-pointer"
-              />
-              <span className="text-sm font-medium">전체</span>
-            </label>
-            {["매매", "전세", "월세"].map((type) => (
-              <label
-                key={type}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedTradeTypes.has(type)}
-                  onChange={() => handleTradeTypeChange(type)}
-                  className="cursor-pointer"
-                />
-                <span className="text-sm">{type}</span>
-              </label>
-            ))}
+    <div className="p-5 bg-card border rounded-xl shadow-sm space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* 조회 기간 필터 */}
+        <div className="space-y-4">
+          <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+            📅 조회 기간 <span className="text-xs font-normal opacity-70">(수집일 기준)</span>
+          </Label>
+          <div className="flex flex-wrap items-center gap-1.5 p-1 bg-muted/50 rounded-lg w-fit">
+            <Button
+              variant={isAllActive ? "default" : "ghost"}
+              size="sm"
+              onClick={() => {
+                setTableStartDate("");
+                setTableEndDate("");
+              }}
+              className="h-8 px-3 text-xs"
+            >
+              전체
+            </Button>
+            <Button
+              variant={isTodayActive ? "default" : "ghost"}
+              size="sm"
+              onClick={() => {
+                const today = getTodayKST();
+                setTableStartDate(today);
+                setTableEndDate(today);
+              }}
+              className="h-8 px-3 text-xs"
+            >
+              오늘
+            </Button>
+            <Button
+              variant={isWeekActive ? "default" : "ghost"}
+              size="sm"
+              onClick={() => {
+                const range = getDaysRange(7);
+                setTableStartDate(range.start);
+                setTableEndDate(range.end);
+              }}
+              className="h-8 px-3 text-xs"
+            >
+              1주일
+            </Button>
+            <Button
+              variant={isOneMonthActive ? "default" : "ghost"}
+              size="sm"
+              onClick={() => {
+                const range = getMonthsRange(1);
+                setTableStartDate(range.start);
+                setTableEndDate(range.end);
+              }}
+              className="h-8 px-3 text-xs"
+            >
+              1개월
+            </Button>
+            <Button
+              variant={isThreeMonthsActive ? "default" : "ghost"}
+              size="sm"
+              onClick={() => {
+                const range = getMonthsRange(3);
+                setTableStartDate(range.start);
+                setTableEndDate(range.end);
+              }}
+              className="h-8 px-3 text-xs"
+            >
+              3개월
+            </Button>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={tableStartDate}
+              onChange={(e) => setTableStartDate(e.target.value)}
+              className="flex h-9 w-full sm:w-40 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            <span className="text-muted-foreground">~</span>
+            <input
+              type="date"
+              value={tableEndDate}
+              onChange={(e) => setTableEndDate(e.target.value)}
+              className="flex h-9 w-full sm:w-40 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
           </div>
         </div>
 
-        {/* 조회 기간 필터 */}
-        <div>
-          <h4 className="text-sm font-medium mb-2">조회 기간 (수집일 기준)</h4>
-          <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 p-1">
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setTableStartDate("");
-                  setTableEndDate("");
-                }}
-                className={`h-7 px-2 text-xs font-medium ${
-                  isAllActive
-                    ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                    : ""
-                }`}
-              >
-                전체
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  const today = formatDate(new Date());
-                  setTableStartDate(today);
-                  setTableEndDate(today);
-                }}
-                className={`h-7 px-2 text-xs font-medium ${
-                  isTodayActive
-                    ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                    : ""
-                }`}
-              >
-                오늘
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  const range = getDaysRange(7);
-                  setTableStartDate(range.start);
-                  setTableEndDate(range.end);
-                }}
-                className={`h-7 px-2 text-xs font-medium ${
-                  isWeekActive
-                    ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                    : ""
-                }`}
-              >
-                1주일
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  const range = getMonthsRange(1);
-                  setTableStartDate(range.start);
-                  setTableEndDate(range.end);
-                }}
-                className={`h-7 px-2 text-xs font-medium ${
-                  isOneMonthActive
-                    ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                    : ""
-                }`}
-              >
-                1개월
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  const range = getMonthsRange(3);
-                  setTableStartDate(range.start);
-                  setTableEndDate(range.end);
-                }}
-                className={`h-7 px-2 text-xs font-medium ${
-                  isThreeMonthsActive
-                    ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                    : ""
-                }`}
-              >
-                3개월
-              </Button>
-            </div>
-            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
-            <div className="flex items-center gap-1">
-              <input
-                type="date"
-                value={tableStartDate}
-                onChange={(e) => setTableStartDate(e.target.value)}
-                className="text-xs border border-slate-200 rounded px-1 py-0.5 bg-transparent"
-              />
-              <span className="text-xs text-slate-400">~</span>
-              <input
-                type="date"
-                value={tableEndDate}
-                onChange={(e) => setTableEndDate(e.target.value)}
-                className="text-xs border border-slate-200 rounded px-1 py-0.5 bg-transparent"
-              />
-            </div>
+        {/* 거래 유형 필터 */}
+        <div className="space-y-4">
+          <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+            🤝 거래 유형
+          </Label>
+          <div className="pt-2">
+            <ToggleGroup 
+              type="multiple" 
+              variant="outline" 
+              className="justify-start gap-2"
+              value={Array.from(selectedTradeTypes)}
+              onValueChange={(values) => {
+                setSelectedTradeTypes(new Set(values));
+              }}
+            >
+              <ToggleGroupItem value="매매" className="px-4 py-2 text-xs data-[state=on]:bg-blue-600 data-[state=on]:text-white">매매</ToggleGroupItem>
+              <ToggleGroupItem value="전세" className="px-4 py-2 text-xs data-[state=on]:bg-emerald-600 data-[state=on]:text-white">전세</ToggleGroupItem>
+              <ToggleGroupItem value="월세" className="px-4 py-2 text-xs data-[state=on]:bg-amber-600 data-[state=on]:text-white">월세</ToggleGroupItem>
+            </ToggleGroup>
           </div>
         </div>
       </div>
 
+      <Separator />
+
       {/* 면적 필터 */}
-      {areaOptions.length > 0 && (
-        <div>
-          <h4 className="text-sm font-medium mb-2">면적</h4>
-          <div className="flex flex-wrap gap-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={selectedAreas.size === areaOptions.length}
-                onChange={() => {
-                  if (selectedAreas.size === areaOptions.length) {
-                    setSelectedAreas(new Set());
-                  } else {
-                    setSelectedAreas(new Set(areaOptions));
-                  }
-                }}
-                className="cursor-pointer"
-              />
-              <span className="text-sm font-medium">전체</span>
-            </label>
-            {areaOptions.map((area: string) => (
-              <label
-                key={area}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedAreas.has(area)}
-                  onChange={() => handleAreaChange(area)}
-                  className="cursor-pointer"
-                />
-                <span className="text-sm">{area}</span>
-              </label>
-            ))}
-          </div>
+      <div className="space-y-4">
+        <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+          📏 전용면적 선택 (m²)
+        </Label>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button
+            variant={selectedAreas.size === 0 ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setSelectedAreas(new Set())}
+            className="h-8 px-4 text-xs rounded-full"
+          >
+            전체
+          </Button>
+          {areaOptions.map((area) => (
+            <Button
+              key={area}
+              variant={selectedAreas.has(area) ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleAreaChange(area)}
+              className={`h-8 px-4 text-xs rounded-full ${
+                selectedAreas.has(area) ? "bg-indigo-600 hover:bg-indigo-700" : ""
+              }`}
+            >
+              {area}m²
+            </Button>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }
+

@@ -3,7 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { complexApi, listingApi, type Listing } from "@/lib/api";
+import { formatDateKST, getTodayKST } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { useAlertStore } from "@/lib/store";
 import { ComplexInfo } from "@/components/complex/ComplexInfo";
 import { ListingChart } from "@/components/complex/ListingChart";
 import { ListingFilters } from "@/components/complex/ListingFilters";
@@ -21,17 +23,14 @@ export default function ComplexDetail() {
     new Set(["매매"])
   );
   const [tableStartDate, setTableStartDate] = useState<string>(() => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - 7);
-    return start.toISOString().split("T")[0];
+    return getTodayKST();
   });
   const [tableEndDate, setTableEndDate] = useState<string>(() => {
-    const end = new Date();
-    return end.toISOString().split("T")[0];
+    return getTodayKST();
   });
   const [selectedAreas, setSelectedAreas] = useState<Set<string>>(new Set());
   const [isScraping, setIsScraping] = useState(false);
+  const { showAlert } = useAlertStore();
 
   // 단지 정보 조회
   const { data: complex, isLoading: complexLoading } = useQuery({
@@ -89,7 +88,7 @@ export default function ComplexDetail() {
 
           // 날짜 필터
           const date = new Date(l.scrapedAt);
-          const dateStr = date.toISOString().split("T")[0];
+          const dateStr = formatDateKST(date);
 
           if (tableStartDate && dateStr < tableStartDate) return false;
           if (tableEndDate && dateStr > tableEndDate) return false;
@@ -134,14 +133,12 @@ export default function ComplexDetail() {
     // 전체 데이터에서 가장 최신 날짜 찾기
     const timestamps = allListings.map((l) => new Date(l.scrapedAt).getTime());
     const maxTimestamp = Math.max(...timestamps);
-    const maxDateStr = new Date(maxTimestamp).toISOString().split("T")[0];
-
+    const maxDateStr = formatDateKST(maxTimestamp);
     // 최신 날짜의 데이터만 필터링
     const latestListings = allListings.filter((l) => {
-      const dateStr = new Date(l.scrapedAt).toISOString().split("T")[0];
+      const dateStr = formatDateKST(l.scrapedAt);
       return dateStr === maxDateStr;
     });
-
     return {
       total: latestListings.length,
       sale: latestListings.filter((l) => l.tradetype === "매매").length,
@@ -157,10 +154,10 @@ export default function ComplexDetail() {
     onSettled: () => setIsScraping(false),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["listings", id] });
-      alert("매물 수집이 완료되었습니다.");
+      showAlert("수집 완료", "매물 수집이 완료되었습니다.");
     },
     onError: (error: any) => {
-      alert(`수집 실패: ${error.message}`);
+      showAlert("수집 실패", `수집 중 오류가 발생했습니다: ${error.message}`);
     },
   });
 
@@ -239,6 +236,7 @@ export default function ComplexDetail() {
       <ListingChart
         allListings={allListings}
         selectedAreas={selectedAreas}
+        setSelectedAreas={setSelectedAreas}
         handleAreaChange={handleAreaChange}
         areaOptions={areaOptions}
       />

@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import ComplexList from './pages/ComplexList'
 import ComplexDetail from './pages/ComplexDetail'
+import { GlobalAlert } from './components/ui/GlobalAlert'
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
           <Route path="/complex/:id" element={<ComplexDetail />} />
         </Routes>
       </Layout>
+      <GlobalAlert />
     </Router>
   )
 }

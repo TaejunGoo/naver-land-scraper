@@ -11,11 +11,17 @@ router.get('/', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     })
     
-    // 오늘 날짜 범위 설정
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
+    // 대한민국 표준시(KST) 기준 오늘 자정 계산
+    const now = new Date()
+    const kstOffset = 9 * 60 * 60 * 1000
+    const kstNow = new Date(now.getTime() + kstOffset)
+    const kstTodayStart = new Date(
+      Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate())
+    )
+    
+    // DB 쿼리를 위해 다시 UTC로 변환 (00:00 KST = 15:00 UTC of previous day)
+    const today = new Date(kstTodayStart.getTime() - kstOffset)
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
     
     // 각 단지의 오늘 매물 수 계산 (유형별)
     const complexesWithCount = await Promise.all(
@@ -149,11 +155,15 @@ router.post('/:id/scrape', async (req, res) => {
       return res.status(400).json({ error: 'Complex not found or missing Naver ID' })
     }
     
-    // 당일 데이터 삭제 (중복 방지)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
+    // 당일 데이터 삭제 (중복 방지) - KST 기준
+    const now = new Date()
+    const kstOffset = 9 * 60 * 60 * 1000
+    const kstNow = new Date(now.getTime() + kstOffset)
+    const kstTodayStart = new Date(
+      Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate())
+    )
+    const today = new Date(kstTodayStart.getTime() - kstOffset)
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
     
     await prisma.listing.deleteMany({
       where: {
@@ -251,11 +261,15 @@ router.post('/scrape-all/listings', async (req, res) => {
       try {
         console.log(`크롤링 시작: ${complex.name}`)
         
-        // 당일 데이터 삭제 (중복 방지)
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const tomorrow = new Date(today)
-        tomorrow.setDate(tomorrow.getDate() + 1)
+        // 당일 데이터 삭제 (중복 방지) - KST 기준
+        const now = new Date()
+        const kstOffset = 9 * 60 * 60 * 1000
+        const kstNow = new Date(now.getTime() + kstOffset)
+        const kstTodayStart = new Date(
+          Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate())
+        )
+        const today = new Date(kstTodayStart.getTime() - kstOffset)
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
         
         await prisma.listing.deleteMany({
           where: {

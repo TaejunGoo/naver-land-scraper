@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
-import { BarChart3 } from "lucide-react";
-import { formatPrice } from "@/lib/format";
+import { useState, useMemo, useEffect } from "react";
+import { BarChart3, Calendar as CalendarIcon, TrendingUp, TrendingDown } from "lucide-react";
+import { formatPrice, formatDateKST, getTodayKST } from "@/lib/format";
 import {
   ComposedChart,
   Line,
@@ -13,6 +13,17 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { Button } from "@/components/ui/button";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Separator } from "@/components/ui/separator";
 
 // 커스텀 툴팁 컴포넌트
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -108,6 +119,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 interface ListingChartProps {
   allListings: any[] | undefined;
   selectedAreas: Set<string>;
+  setSelectedAreas: (areas: Set<string>) => void;
   handleAreaChange: (area: string) => void;
   areaOptions: string[];
 }
@@ -115,16 +127,17 @@ interface ListingChartProps {
 export function ListingChart({
   allListings,
   selectedAreas,
+  setSelectedAreas,
   handleAreaChange,
   areaOptions,
 }: ListingChartProps) {
   const [chartStartDate, setChartStartDate] = useState<string>(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
-    return d.toISOString().split("T")[0];
+    return formatDateKST(d);
   });
   const [chartEndDate, setChartEndDate] = useState<string>(() => {
-    return new Date().toISOString().split("T")[0];
+    return getTodayKST();
   });
   const [chartTradeType, setChartTradeType] = useState<string>("매매");
 
@@ -150,7 +163,7 @@ export function ListingChart({
     filteredListings.forEach((listing) => {
       const date = new Date(listing.scrapedAt);
       if (date >= start && date <= end) {
-        const dateStr = date.toISOString().split("T")[0];
+        const dateStr = formatDateKST(date);
         if (!dateMap.has(dateStr)) {
           dateMap.set(dateStr, { prices: [] });
         }
@@ -162,7 +175,7 @@ export function ListingChart({
     // 날짜 범위 내 모든 날짜 생성 (빈 날짜도 포함)
     const result = [];
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().split("T")[0];
+      const dateStr = formatDateKST(d);
       const data = dateMap.get(dateStr) || { prices: [] };
       const prices = data.prices;
 
@@ -192,111 +205,137 @@ export function ListingChart({
   if (!allListings || allListings.length === 0) return null;
 
   return (
-    <div className="bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-950 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      {/* 헤더 */}
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 px-6 py-4">
-        <div className="flex flex-wrap justify-between items-center gap-4">
+    <div className="bg-card border rounded-xl shadow-sm overflow-hidden flex flex-col">
+      {/* 헤더 및 필터 영역 */}
+      <div className="px-6 py-5 border-b space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h4 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-              📊 날짜별 매물 통계
+            <h4 className="text-lg font-bold flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-indigo-500" />
+              시세 트렌드 분석
             </h4>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-0.5">
               {chartData.length > 0
-                ? `${chartData.length}일간의 데이터 (전체 매물 기준)`
-                : "데이터를 불러오는 중..."}
+                ? `${chartData.length}일간의 수집 데이터 통계`
+                : "데이터가 충분하지 않습니다."}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {/* 날짜 범위 선택 */}
-            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 p-1">
-              <div className="flex items-center gap-1">
+
+          <div className="flex items-center gap-2">
+            <ToggleGroup 
+              type="single" 
+              value={chartTradeType} 
+              onValueChange={(value) => value && setChartTradeType(value)}
+              className="bg-muted p-1 rounded-lg h-9"
+            >
+              <ToggleGroupItem value="매매" className="text-xs px-3 data-[state=on]:bg-white data-[state=on]:shadow-sm">매매</ToggleGroupItem>
+              <ToggleGroupItem value="전세" className="text-xs px-3 data-[state=on]:bg-white data-[state=on]:shadow-sm">전세</ToggleGroupItem>
+              <ToggleGroupItem value="월세" className="text-xs px-3 data-[state=on]:bg-white data-[state=on]:shadow-sm">월세</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="flex flex-wrap items-center gap-6">
+          {/* 기간 선택 */}
+          <div className="space-y-2">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">조회 기간</span>
+            <div className="flex items-center gap-3">
+              <div className="flex p-1 bg-muted rounded-lg">
                 {[
                   { value: 7, label: "7일" },
-                  { value: 30, label: "30일" },
-                  { value: 90, label: "90일" },
+                  { value: 30, label: "1개월" },
+                  { value: 90, label: "3개월" },
                   { value: 180, label: "6개월" },
-                  { value: 365, label: "1년" },
                 ].map(({ value, label }) => (
-                  <button
+                  <Button
                     key={value}
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       const end = new Date();
                       const start = new Date();
                       start.setDate(end.getDate() - value);
-                      setChartEndDate(end.toISOString().split("T")[0]);
-                      setChartStartDate(start.toISOString().split("T")[0]);
+                      setChartEndDate(formatDateKST(end));
+                      setChartStartDate(formatDateKST(start));
                     }}
-                    className="px-2 py-1 text-xs font-medium rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400"
+                    className={`h-7 px-2.5 text-xs ${
+                      chartStartDate === formatDateKST(new Date(new Date().setDate(new Date().getDate() - value)))
+                        ? "bg-background shadow-sm font-bold"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
                   >
                     {label}
-                  </button>
+                  </Button>
                 ))}
               </div>
-              <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
-              <div className="flex items-center gap-1">
+              
+              <div className="flex items-center gap-1.5 px-2 py-1 border rounded-md bg-muted/30">
                 <input
                   type="date"
                   value={chartStartDate}
                   onChange={(e) => setChartStartDate(e.target.value)}
-                  className="text-xs border border-slate-200 rounded px-1 py-0.5 bg-transparent"
+                  className="bg-transparent border-none text-xs w-28 focus:ring-0"
                 />
-                <span className="text-xs text-slate-400">~</span>
+                <span className="text-muted-foreground">~</span>
                 <input
                   type="date"
                   value={chartEndDate}
                   onChange={(e) => setChartEndDate(e.target.value)}
-                  className="text-xs border border-slate-200 rounded px-1 py-0.5 bg-transparent"
+                  className="bg-transparent border-none text-xs w-28 focus:ring-0"
                 />
               </div>
             </div>
+          </div>
 
-            {/* 거래유형 선택 */}
-            <select
-              value={chartTradeType}
-              onChange={(e) => setChartTradeType(e.target.value)}
-              className="px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 rounded-lg cursor-pointer hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-            >
-              <option value="매매">💰 매매</option>
-              <option value="전세">🏡 전세</option>
-              <option value="월세">📅 월세</option>
-            </select>
-            {/* 면적 필터 */}
-            <div className="flex gap-2 items-center bg-white dark:bg-slate-800 rounded-lg border border-slate-200 px-3 py-1.5">
-              <span className="text-xs font-medium text-slate-600 whitespace-nowrap">
-                면적:
-              </span>
-              <div className="flex gap-1 flex-wrap max-w-xs">
-                {areaOptions.map((area) => (
-                  <label
-                    key={area}
-                    className="flex items-center gap-1 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedAreas.has(area)}
-                      onChange={() => handleAreaChange(area)}
-                      className="w-3 h-3 cursor-pointer"
-                    />
-                    <span className="text-xs text-slate-600">{area}</span>
-                  </label>
-                ))}
-              </div>
+          {/* 면적 필터 (배지 형태) */}
+          <div className="space-y-2">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">면적 필터</span>
+            <div className="flex flex-wrap gap-1.5">
+              <Badge
+                variant={selectedAreas.size === 0 || selectedAreas.size === areaOptions.length ? "secondary" : "outline"}
+                className="cursor-pointer transition-all hover:scale-105 hover:bg-muted"
+                onClick={() => {
+                  if (selectedAreas.size === areaOptions.length) {
+                    setSelectedAreas(new Set());
+                  } else {
+                    setSelectedAreas(new Set(areaOptions));
+                  }
+                }}
+              >
+                전체
+              </Badge>
+              {areaOptions.map((area) => (
+                <Badge
+                  key={area}
+                  variant={selectedAreas.has(area) ? "default" : "outline"}
+                  className={`cursor-pointer transition-all hover:scale-105 ${
+                    selectedAreas.has(area) 
+                      ? "bg-indigo-600 hover:bg-indigo-700" 
+                      : "hover:border-indigo-300 hover:text-indigo-600"
+                  }`}
+                  onClick={() => handleAreaChange(area)}
+                >
+                  {area}m²
+                </Badge>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      {chartData.length > 0 ? (
-        <div className="p-6 space-y-6">
-          {/* 그래프 */}
-          <div
-            className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-100"
-            style={{ height: "450px" }}
-          >
-            <ResponsiveContainer width="100%" height="100%">
+      <div className="p-6">
+        {chartData.length > 0 ? (
+          <div className="space-y-6">
+            <div
+              className="bg-muted/30 rounded-xl p-4 border border-dashed"
+              style={{ height: "400px" }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={chartData}
-                margin={{ top: 10, right: 30, left: 10, bottom: 60 }}
+                margin={{ top: 10, right: 30, left: 10, bottom: 0 }}
               >
                 <defs>
                   <linearGradient id="colorBand" x1="0" y1="0" x2="0" y2="1">
@@ -425,6 +464,7 @@ export function ListingChart({
           </p>
         </div>
       )}
+      </div>
     </div>
   );
 }

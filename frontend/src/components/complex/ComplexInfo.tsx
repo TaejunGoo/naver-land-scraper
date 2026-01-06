@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { complexApi, type Complex } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { useAlertStore } from "@/lib/store";
 import {
   Card,
   CardContent,
@@ -20,41 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-
-const SUBWAY_LINES = [
-  "1호선",
-  "2호선",
-  "3호선",
-  "4호선",
-  "5호선",
-  "6호선",
-  "7호선",
-  "8호선",
-  "9호선",
-  "신분당선",
-  "수인분당선",
-  "경의중앙선",
-  "공항철도",
-  "GTX-A",
-];
-
-const getTagColor = (tag: string) => {
-  if (tag.includes("1호선")) return "bg-[#0052A4] hover:bg-[#0052A4]/90";
-  if (tag.includes("2호선")) return "bg-[#00A84D] hover:bg-[#00A84D]/90";
-  if (tag.includes("3호선")) return "bg-[#EF7C1C] hover:bg-[#EF7C1C]/90";
-  if (tag.includes("4호선")) return "bg-[#00A5DE] hover:bg-[#00A5DE]/90";
-  if (tag.includes("5호선")) return "bg-[#996CAC] hover:bg-[#996CAC]/90";
-  if (tag.includes("6호선")) return "bg-[#CD7C2F] hover:bg-[#CD7C2F]/90";
-  if (tag.includes("7호선")) return "bg-[#747F00] hover:bg-[#747F00]/90";
-  if (tag.includes("8호선")) return "bg-[#E6186C] hover:bg-[#E6186C]/90";
-  if (tag.includes("9호선")) return "bg-[#BDB092] hover:bg-[#BDB092]/90";
-  if (tag.includes("신분당")) return "bg-[#D4003B] hover:bg-[#D4003B]/90";
-  if (tag.includes("수인분당")) return "bg-[#F5A200] hover:bg-[#F5A200]/90";
-  if (tag.includes("경의중앙")) return "bg-[#77C4A3] hover:bg-[#77C4A3]/90";
-  if (tag.includes("공항철도")) return "bg-[#0090D2] hover:bg-[#0090D2]/90";
-  if (tag.includes("GTX")) return "bg-[#1E1E1E] hover:bg-[#1E1E1E]/90";
-  return "bg-slate-500 hover:bg-slate-500/90";
-};
+import { SUBWAY_LINES, getTagColor } from "@/lib/constants";
 
 interface ComplexInfoProps {
   complex: Complex;
@@ -71,14 +38,11 @@ export function ComplexInfo({
   currentListingCounts,
 }: ComplexInfoProps) {
   const queryClient = useQueryClient();
+  const { showAlert } = useAlertStore();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Complex>>({});
   const [subwayLines, setSubwayLines] = useState<string[]>([]);
   const [otherTags, setOtherTags] = useState("");
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
 
   useEffect(() => {
     if (isEditing && complex) {
@@ -116,8 +80,7 @@ export function ComplexInfo({
         queryKey: ["complex", String(complex.id)],
       });
       setIsEditing(false);
-      setToast({ message: "단지 정보가 수정되었습니다.", type: "success" });
-      setTimeout(() => setToast(null), 3000);
+      showAlert("수정 완료", "단지 정보가 수정되었습니다.");
     },
   });
 
@@ -127,20 +90,12 @@ export function ComplexInfo({
       queryClient.invalidateQueries({
         queryKey: ["complex", String(complex.id)],
       });
-      setToast({
-        message: "단지 정보 수집 성공!",
-        type: "success",
-      });
-      setTimeout(() => setToast(null), 3000);
+      showAlert("수집 성공", "단지 정보 수집에 성공했습니다.");
     },
     onError: (error: any) => {
       const errorMessage =
         error?.response?.data?.error || error?.message || "수집 실패";
-      setToast({
-        message: `단지 정보 수집 실패: ${errorMessage}`,
-        type: "error",
-      });
-      setTimeout(() => setToast(null), 3000);
+      showAlert("수집 실패", `단지 정보 수집 중 오류가 발생했습니다: ${errorMessage}`);
     },
   });
 
@@ -157,7 +112,7 @@ export function ComplexInfo({
 
     updateMutation.mutate({
       ...formData,
-      tags: JSON.stringify(allTags),
+      tags: allTags as any,
     });
   };
 
@@ -171,20 +126,11 @@ export function ComplexInfo({
 
   return (
     <>
-      {toast && (
-        <div
-          className={`fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white animate-in fade-in slide-in-from-top-2 z-50 ${
-            toast.type === "success" ? "bg-green-500" : "bg-red-500"
-          }`}
-        >
-          {toast.message}
-        </div>
-      )}
       <Card>
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle>{complex.name}</CardTitle>
+              <CardTitle className="text-3xl">{complex.name}</CardTitle>
               <CardDescription>{complex.address}</CardDescription>
               {!isEditing && complex.tags && (
                 <div className="flex flex-wrap gap-1 mt-2">
@@ -198,6 +144,7 @@ export function ComplexInfo({
                         .map((t) => t.trim())
                         .filter((t) => t);
                     }
+                    console.log("Tags:", tags);
                     return tags.map((tag, index) => (
                       <Badge
                         key={index}
