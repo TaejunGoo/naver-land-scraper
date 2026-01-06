@@ -147,10 +147,10 @@ export function ListingChart({
       if (l.tradetype !== chartTradeType) return false;
       if (selectedAreas.size > 0 && !selectedAreas.has(String(l.area)))
         return false;
-      
+
       const dateStr = formatDateKST(l.scrapedAt);
       if (dateStr < chartStartDate || dateStr > chartEndDate) return false;
-      
+
       return true;
     });
 
@@ -196,8 +196,6 @@ export function ListingChart({
     selectedAreas,
   ]);
 
-  if (!allListings || allListings.length === 0) return null;
-
   return (
     <div className="bg-card border rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
       {/* 헤더 및 필터 영역 */}
@@ -216,15 +214,30 @@ export function ListingChart({
           </div>
 
           <div className="flex items-center gap-2">
-            <ToggleGroup 
-              type="single" 
-              value={chartTradeType} 
+            <ToggleGroup
+              type="single"
+              value={chartTradeType}
               onValueChange={(value) => value && setChartTradeType(value)}
               className="bg-muted p-1 rounded-lg h-9"
             >
-              <ToggleGroupItem value="매매" className="text-xs px-3 data-[state=on]:bg-black data-[state=on]:text-white data-[state=on]:shadow-sm">매매</ToggleGroupItem>
-              <ToggleGroupItem value="전세" className="text-xs px-3 data-[state=on]:bg-black data-[state=on]:text-white data-[state=on]:shadow-sm">전세</ToggleGroupItem>
-              <ToggleGroupItem value="월세" className="text-xs px-3 data-[state=on]:bg-black data-[state=on]:text-white data-[state=on]:shadow-sm">월세</ToggleGroupItem>
+              <ToggleGroupItem
+                value="매매"
+                className="text-xs px-3 data-[state=on]:bg-black data-[state=on]:text-white data-[state=on]:shadow-sm"
+              >
+                매매
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="전세"
+                className="text-xs px-3 data-[state=on]:bg-black data-[state=on]:text-white data-[state=on]:shadow-sm"
+              >
+                전세
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="월세"
+                className="text-xs px-3 data-[state=on]:bg-black data-[state=on]:text-white data-[state=on]:shadow-sm"
+              >
+                월세
+              </ToggleGroupItem>
             </ToggleGroup>
           </div>
         </div>
@@ -234,7 +247,9 @@ export function ListingChart({
         <div className="flex flex-wrap gap-6">
           {/* 기간 선택 */}
           <div className="space-y-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">조회 기간</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              조회 기간
+            </span>
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex p-1 bg-muted rounded-lg">
                 {[
@@ -255,7 +270,12 @@ export function ListingChart({
                       setChartStartDate(formatDateKST(start));
                     }}
                     className={`h-7 px-2.5 text-xs ${
-                      chartStartDate === formatDateKST(new Date(new Date().setDate(new Date().getDate() - value)))
+                      chartStartDate ===
+                      formatDateKST(
+                        new Date(
+                          new Date().setDate(new Date().getDate() - value)
+                        )
+                      )
                         ? "bg-background shadow-sm font-bold"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
@@ -264,7 +284,7 @@ export function ListingChart({
                   </Button>
                 ))}
               </div>
-              
+
               <div className="flex items-center gap-1.5 px-2 py-1 border rounded-md bg-muted/30">
                 <input
                   type="date"
@@ -285,10 +305,17 @@ export function ListingChart({
 
           {/* 면적 필터 (배지 형태) */}
           <div className="space-y-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">전용면적 선택</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              전용면적 선택
+            </span>
             <div className="flex flex-wrap gap-1.5">
               <Badge
-                variant={selectedAreas.size === 0 || selectedAreas.size === areaOptions.length ? "secondary" : "outline"}
+                variant={
+                  selectedAreas.size === 0 ||
+                  selectedAreas.size === areaOptions.length
+                    ? "secondary"
+                    : "outline"
+                }
                 className="cursor-pointer transition-all hover:scale-105 hover:bg-muted h-[34px]"
                 onClick={() => {
                   if (selectedAreas.size === areaOptions.length) {
@@ -305,8 +332,8 @@ export function ListingChart({
                   key={area}
                   variant={selectedAreas.has(area) ? "default" : "outline"}
                   className={`cursor-pointer transition-all hover:scale-105 ${
-                    selectedAreas.has(area) 
-                      ? "bg-indigo-600 hover:bg-indigo-700" 
+                    selectedAreas.has(area)
+                      ? "bg-indigo-600 hover:bg-indigo-700"
                       : "hover:border-indigo-300 hover:text-indigo-600"
                   }`}
                   onClick={() => handleAreaChange(area)}
@@ -327,140 +354,144 @@ export function ListingChart({
               style={{ height: "400px" }}
             >
               <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                data={chartData}
-                margin={{ top: 20, right: 10, left: -10, bottom: 10 }}
-              >
-                <defs>
-                  <linearGradient id="colorBand" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#93c5fd" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#dbeafe" stopOpacity={0.1} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#e2e8f0"
-                  opacity={0.5}
-                />
-                <XAxis
-                  dataKey="displayDate"
-                  tick={{ fontSize: 11, fill: "#64748b" }}
-                  angle={-45}
-                  textAnchor="end"
-                  height={60}
-                  stroke="#cbd5e1"
-                  interval="preserveStartEnd"
-                />
-                <YAxis
-                  yAxisId="left"
-                  tick={{ fontSize: 11, fill: "#64748b" }}
-                  tickFormatter={(value) => `${(value / 10000).toFixed(0)}억`}
-                  stroke="#cbd5e1"
-                  width={45}
-                />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  tick={{ fontSize: 11, fill: "#64748b" }}
-                  stroke="#cbd5e1"
-                  width={25}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend
-                  wrapperStyle={{ paddingTop: "10px" }}
-                  iconType="circle"
-                />
+                <ComposedChart
+                  data={chartData}
+                  margin={{ top: 20, right: 10, left: -10, bottom: 10 }}
+                >
+                  <defs>
+                    <linearGradient id="colorBand" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#93c5fd" stopOpacity={0.4} />
+                      <stop
+                        offset="95%"
+                        stopColor="#dbeafe"
+                        stopOpacity={0.1}
+                      />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#e2e8f0"
+                    opacity={0.5}
+                  />
+                  <XAxis
+                    dataKey="displayDate"
+                    tick={{ fontSize: 11, fill: "#64748b" }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                    stroke="#cbd5e1"
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    yAxisId="left"
+                    tick={{ fontSize: 11, fill: "#64748b" }}
+                    tickFormatter={(value) => `${(value / 10000).toFixed(0)}억`}
+                    stroke="#cbd5e1"
+                    width={45}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    tick={{ fontSize: 11, fill: "#64748b" }}
+                    stroke="#cbd5e1"
+                    width={25}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend
+                    wrapperStyle={{ paddingTop: "10px" }}
+                    iconType="circle"
+                  />
 
-                {/* 밴드 영역: 최고가 Area */}
-                <Area
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="max"
-                  stroke="none"
-                  fill="url(#colorBand)"
-                  name="가격 밴드"
-                />
-                {/* 밴드 영역: 최저가 Area (위쪽을 덮어서 밴드 만들기) */}
-                <Area
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="min"
-                  stroke="none"
-                  fill="white"
-                  fillOpacity={1}
-                />
+                  {/* 밴드 영역: 최고가 Area */}
+                  <Area
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="max"
+                    stroke="none"
+                    fill="url(#colorBand)"
+                    name="가격 밴드"
+                  />
+                  {/* 밴드 영역: 최저가 Area (위쪽을 덮어서 밴드 만들기) */}
+                  <Area
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="min"
+                    stroke="none"
+                    fill="white"
+                    fillOpacity={1}
+                  />
 
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="max"
-                  stroke="#ef4444"
-                  name="최고가"
-                  strokeWidth={3}
-                  dot={{
-                    r: 4,
-                    fill: "#ef4444",
-                    strokeWidth: 2,
-                    stroke: "#fff",
-                  }}
-                  activeDot={{ r: 6, fill: "#ef4444" }}
-                />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="median"
-                  stroke="#8b5cf6"
-                  name="중간값"
-                  strokeWidth={2.5}
-                  dot={{
-                    r: 3,
-                    fill: "#8b5cf6",
-                    strokeWidth: 2,
-                    stroke: "#fff",
-                  }}
-                  activeDot={{ r: 6, fill: "#8b5cf6" }}
-                  strokeDasharray="8 4"
-                />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="min"
-                  stroke="#10b981"
-                  name="최저가"
-                  strokeWidth={3}
-                  dot={{
-                    r: 4,
-                    fill: "#10b981",
-                    strokeWidth: 2,
-                    stroke: "#fff",
-                  }}
-                  activeDot={{ r: 6, fill: "#10b981" }}
-                />
-                <Bar
-                  yAxisId="right"
-                  dataKey="count"
-                  fill="#fb923c"
-                  name="매물 수"
-                  opacity={0.5}
-                  radius={[4, 4, 0, 0]}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="max"
+                    stroke="#ef4444"
+                    name="최고가"
+                    strokeWidth={3}
+                    dot={{
+                      r: 4,
+                      fill: "#ef4444",
+                      strokeWidth: 2,
+                      stroke: "#fff",
+                    }}
+                    activeDot={{ r: 6, fill: "#ef4444" }}
+                  />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="median"
+                    stroke="#8b5cf6"
+                    name="중간값"
+                    strokeWidth={2.5}
+                    dot={{
+                      r: 3,
+                      fill: "#8b5cf6",
+                      strokeWidth: 2,
+                      stroke: "#fff",
+                    }}
+                    activeDot={{ r: 6, fill: "#8b5cf6" }}
+                    strokeDasharray="8 4"
+                  />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="min"
+                    stroke="#10b981"
+                    name="최저가"
+                    strokeWidth={3}
+                    dot={{
+                      r: 4,
+                      fill: "#10b981",
+                      strokeWidth: 2,
+                      stroke: "#fff",
+                    }}
+                    activeDot={{ r: 6, fill: "#10b981" }}
+                  />
+                  <Bar
+                    yAxisId="right"
+                    dataKey="count"
+                    fill="#fb923c"
+                    name="매물 수"
+                    opacity={0.5}
+                    radius={[4, 4, 0, 0]}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="p-12 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 mb-4">
-            <BarChart3 className="w-8 h-8 text-slate-400" />
+        ) : (
+          <div className="p-12 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 mb-4">
+              <BarChart3 className="w-8 h-8 text-slate-400" />
+            </div>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+              선택한 기간에 데이터가 없습니다
+            </p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+              다른 기간을 선택해보세요
+            </p>
           </div>
-          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-            선택한 기간에 데이터가 없습니다
-          </p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-            다른 기간을 선택해보세요
-          </p>
-        </div>
-      )}
+        )}
       </div>
     </div>
   );

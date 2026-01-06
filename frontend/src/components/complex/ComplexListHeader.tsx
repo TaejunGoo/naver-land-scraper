@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Beaker, RefreshCw, Plus, ArrowUpDown } from "lucide-react";
+import { Beaker, RefreshCw, Plus, ArrowUpDown, Download } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -11,6 +11,7 @@ import {
 interface ComplexListHeaderProps {
   onAddClick: () => void;
   onScrapeAllClick: () => void;
+  onExportExcelClick: () => void;
   onCreateTestClick: () => void;
   isScrapingAll: boolean;
   isCreatingTest: boolean;
@@ -24,6 +25,7 @@ interface ComplexListHeaderProps {
 export function ComplexListHeader({
   onAddClick,
   onScrapeAllClick,
+  onExportExcelClick,
   onCreateTestClick,
   isScrapingAll,
   isCreatingTest,
@@ -47,6 +49,14 @@ export function ComplexListHeader({
               className={`w-4 h-4 mr-2 ${isCreatingTest ? "animate-spin" : ""}`}
             />
             {isCreatingTest ? "생성 중..." : "테스트 단지 생성"}
+          </Button>
+          <Button
+            onClick={onExportExcelClick}
+            variant="outline"
+            disabled={!hasComplexes}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            엑셀 내보내기
           </Button>
           <Button
             onClick={onScrapeAllClick}

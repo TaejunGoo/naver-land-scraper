@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ExternalLink, RefreshCw, Info } from "lucide-react";
+import { ExternalLink, RefreshCw, Info, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHeaderStore } from "@/lib/store";
 import { ComplexInfo } from "@/components/complex/ComplexInfo";
@@ -31,8 +31,10 @@ export default function ComplexDetail() {
     setSelectedAreas,
     isScraping,
     isRefreshingInfo,
+    isExporting,
     handleScrape,
     handleScrapeInfo,
+    handleExportExcel,
     handleSort,
     handleAreaChange,
     currentListingCounts,
@@ -67,13 +69,27 @@ export default function ComplexDetail() {
             </Link>
             <Button
               variant="outline"
+              onClick={handleExportExcel}
+              disabled={isExporting}
+              size="sm"
+              className="gap-1.5 h-9"
+            >
+              <Download
+                className={`w-3.5 h-3.5 ${isExporting ? "animate-pulse" : ""}`}
+              />
+              엑셀 저장
+            </Button>
+            <Button
+              variant="outline"
               onClick={handleScrapeInfo}
               disabled={isRefreshingInfo}
               size="sm"
               className="gap-1.5 h-9"
             >
               <Info
-                className={`w-3.5 h-3.5 ${isRefreshingInfo ? "animate-spin" : ""}`}
+                className={`w-3.5 h-3.5 ${
+                  isRefreshingInfo ? "animate-spin" : ""
+                }`}
               />
               정보 갱신
             </Button>
@@ -98,8 +114,10 @@ export default function ComplexDetail() {
     complex,
     isScraping,
     isRefreshingInfo,
+    isExporting,
     handleScrape,
     handleScrapeInfo,
+    handleExportExcel,
     setHeader,
     resetHeader,
   ]);

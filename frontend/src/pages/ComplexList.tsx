@@ -3,10 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { complexApi, type Complex } from "@/lib/api";
 import { useAlertStore, useHeaderStore } from "@/lib/store";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { downloadBlob } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
 import { SUBWAY_LINES } from "@/lib/constants";
 import { ComplexListHeader } from "@/components/complex/ComplexListHeader";
 import { ComplexForm } from "@/components/complex/ComplexForm";
@@ -36,7 +34,7 @@ export default function ComplexList() {
     setHeader({
       title: "대시보드",
       actions: null,
-      showBackButton: false
+      showBackButton: false,
     });
     return () => resetHeader();
   }, [setHeader, resetHeader]);
@@ -89,10 +87,10 @@ export default function ComplexList() {
     mutationFn: (data: Partial<Complex>) => complexApi.create(data),
     onSuccess: async (response: any) => {
       const newComplex = response.data;
-      
+
       // 1. 단지 리스트 새로고침
       queryClient.invalidateQueries({ queryKey: ["complexes"] });
-      
+
       // 2. 폼 초기화 및 닫기
       setShowForm(false);
       resetForm();
@@ -104,9 +102,15 @@ export default function ComplexList() {
           await complexApi.scrapeInfo(newComplex.id);
           // 정보 수집 후 다시 한번 리스트 새로고침
           queryClient.invalidateQueries({ queryKey: ["complexes"] });
-          showAlert("등록 및 수집 완료", "단지 정보를 성공적으로 수집했습니다.");
+          showAlert(
+            "등록 및 수집 완료",
+            "단지 정보를 성공적으로 수집했습니다."
+          );
         } catch (e) {
-          showAlert("등록 성공", "단지는 등록되었으나 정보 수집에 실패했습니다.");
+          showAlert(
+            "등록 성공",
+            "단지는 등록되었으나 정보 수집에 실패했습니다."
+          );
         }
       } else {
         showAlert("등록 완료", "새 단지가 등록되었습니다.");
@@ -180,7 +184,18 @@ export default function ComplexList() {
       showAlert("생성 실패", "테스트 단지 생성에 실패했습니다.");
     },
   });
-
+  const exportExcelMutation = useMutation({
+    mutationFn: () => complexApi.exportAllExcel(),
+    onSuccess: (response: any) => {
+      const filename = `전체_데이터_추출_${
+        new Date().toISOString().split("T")[0]
+      }.xlsx`;
+      downloadBlob(response.data, filename);
+    },
+    onError: () => {
+      showAlert("오류", "엑셀 파일을 생성하는 중 문제가 발생했습니다.");
+    },
+  });
   const handleEdit = (complex: Complex) => {
     let tags: string[] = [];
     try {
@@ -226,7 +241,9 @@ export default function ComplexList() {
     window.location.assign("/api/backups/download");
   };
 
-  const handleUploadRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadRestore = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -244,9 +261,13 @@ export default function ComplexList() {
           });
 
           if (response.ok) {
-            showAlert("복구 성공", "데이터가 성공적으로 복구되었습니다. 최신 정보를 불러오기 위해 페이지를 새로고침합니다.", () => {
-              window.location.reload();
-            });
+            showAlert(
+              "복구 성공",
+              "데이터가 성공적으로 복구되었습니다. 최신 정보를 불러오기 위해 페이지를 새로고침합니다.",
+              () => {
+                window.location.reload();
+              }
+            );
           } else {
             throw new Error("업로드 실패");
           }
@@ -255,7 +276,7 @@ export default function ComplexList() {
         }
       }
     );
-    
+
     e.target.value = "";
   };
 
@@ -298,13 +319,14 @@ export default function ComplexList() {
           setShowForm(!showForm);
         }}
         onScrapeAllClick={() => scrapeAllMutation.mutate()}
+        onExportExcelClick={() => exportExcelMutation.mutate()}
         onCreateTestClick={() => {
           if (
             confirm(
-              "365일간의 더미 데이터가 포함된 테스트 단지를 생성하시겠습니까?"
+              "7일간의 더미 데이터가 포함된 테스트 단지를 생성하시겠습니까?"
             )
           ) {
-            createTestComplexMutation.mutate(365);
+            createTestComplexMutation.mutate(7);
           }
         }}
         isScrapingAll={scrapeAllMutation.isPending}
@@ -325,7 +347,10 @@ export default function ComplexList() {
           onCancel={resetForm}
           onDelete={
             editingId
-              ? () => handleDeleteComplex(complexes?.find((c) => c.id === editingId)!)
+              ? () =>
+                  handleDeleteComplex(
+                    complexes?.find((c) => c.id === editingId)!
+                  )
               : undefined
           }
           isSubmitting={createMutation.isPending || updateMutation.isPending}
@@ -334,11 +359,7 @@ export default function ComplexList() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {sortedComplexes?.map((complex) => (
-          <ComplexCard
-            key={complex.id}
-            complex={complex}
-            onEdit={handleEdit}
-          />
+          <ComplexCard key={complex.id} complex={complex} onEdit={handleEdit} />
         ))}
       </div>
 
@@ -358,7 +379,9 @@ export default function ComplexList() {
           </div>
           <div>
             <h2 className="text-xl font-bold">데이터 관리</h2>
-            <p className="text-sm text-muted-foreground">내 데이터를 다른 곳에 저장하거나, 공유받은 데이터를 불러옵니다.</p>
+            <p className="text-sm text-muted-foreground">
+              내 데이터를 다른 곳에 저장하거나, 공유받은 데이터를 불러옵니다.
+            </p>
           </div>
         </div>
 
@@ -372,9 +395,15 @@ export default function ComplexList() {
                 <div className="space-y-2 flex-1">
                   <h3 className="font-semibold">데이터 내보내기</h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    현재까지 수집된 모든 아파트 단지 정보와 매물 시세를 하나의 .db 파일로 내려받습니다.
+                    현재까지 수집된 모든 아파트 단지 정보와 매물 시세를 하나의
+                    .db 파일로 내려받습니다.
                   </p>
-                  <Button variant="outline" size="sm" onClick={handleDownloadBackup} className="w-full mt-2 bg-white">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadBackup}
+                    className="w-full mt-2 bg-white"
+                  >
                     파일로 저장하기
                   </Button>
                 </div>
@@ -391,7 +420,10 @@ export default function ComplexList() {
                 <div className="space-y-2 flex-1">
                   <h3 className="font-semibold">데이터 불러오기</h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    공유받은 .db 파일을 업로드하여 데이터를 복구합니다. <span className="text-red-500 font-medium">현재 데이터는 삭제되므로 유의하세요.</span>
+                    공유받은 .db 파일을 업로드하여 데이터를 복구합니다.{" "}
+                    <span className="text-red-500 font-medium">
+                      현재 데이터는 삭제되므로 유의하세요.
+                    </span>
                   </p>
                   <div className="relative mt-2">
                     <input
@@ -401,10 +433,12 @@ export default function ComplexList() {
                       accept=".db"
                       onChange={handleUploadRestore}
                     />
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => document.getElementById('db-upload')?.click()}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        document.getElementById("db-upload")?.click()
+                      }
                       className="w-full bg-white"
                     >
                       파일 선택 및 복구
@@ -415,13 +449,13 @@ export default function ComplexList() {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="mt-4 flex items-center gap-2 text-[11px] text-amber-600 bg-amber-50 p-2 rounded-md border border-amber-100">
           <AlertCircle className="w-3 h-3" />
-          데이터를 불러온 후에는 기존 시황 정보가 모두 덮어써집니다. 중요한 데이터는 미리 내보내기를 통해 보관하세요.
+          데이터를 불러온 후에는 기존 시황 정보가 모두 덮어써집니다. 중요한
+          데이터는 미리 내보내기를 통해 보관하세요.
         </div>
       </div>
     </div>
   );
 }
-
