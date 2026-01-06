@@ -26,10 +26,24 @@ if not exist "node_modules" (
     echo 라이브러리가 없습니다. 설치를 시작합니다...
     call npm install
 )
+
+echo 데이터베이스 상태 확인 중...
 if not exist "prisma\dev.db" (
-    echo 데이터베이스를 초기화합니다...
-    call npx prisma migrate dev --name init
+    echo [알림] DB 파일이 없습니다. 초기화를 시작합니다...
+    call npx prisma db push --accept-data-loss
+) else (
+    echo.
+    echo 알림 : DB 스키마 구조를 업데이트하시겠습니까?
+    echo 변경 사항이 없다면 N을 눌러 건너뛰세요. 3초 후 자동 건너뜀
+    choice /t 3 /d n /m "> DB를 업데이트하시겠습니까?"
+    if errorlevel 2 (
+        echo 진행 : 스키마 업데이트를 건너뜁니다.
+    ) else (
+        echo 진행 : DB 업데이트 중...
+        call npx prisma db push --accept-data-loss
+    )
 )
+call npx prisma generate
 cd ..
 
 :: 2. 프런트엔드 초기화 체크

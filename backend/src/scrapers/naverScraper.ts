@@ -1,5 +1,6 @@
 import puppeteer, { Browser } from 'puppeteer'
 import { ListingData, ComplexInfo } from '../types/index.js'
+import { parseNaverArticle } from './parsers.js'
 
 /**
  * 지연 함수 (ms 단위)
@@ -157,38 +158,8 @@ export async function scrapeNaverListings(naverComplexId: string): Promise<Listi
               console.log(`[Scraper] API 응답 수집: ${data.articleList.length}개 항목`)
               for (const article of data.articleList) {
                 try {
-                  let tradetype = '매매'
-                  if (article.tradeTypeCode === 'B1') tradetype = '전세'
-                  else if (article.tradeTypeCode === 'B2') tradetype = '월세'
-                  
-                  let price = 0
-                  const priceText = article.dealOrWarrantPrc || ''
-                  if (priceText.includes('억')) {
-                    const parts = priceText.split('억')
-                    price = parseInt(parts[0].replace(/,/g, '')) * 10000
-                    if (parts[1]) price += parseInt(parts[1].replace(/,/g, '')) || 0
-                  } else {
-                    price = parseInt(priceText.replace(/,/g, '')) || 0
-                  }
-                  
-                  if (tradetype === '월세' && article.rentPrc) {
-                    price = parseInt(article.rentPrc.replace(/,/g, '')) || 0
-                  }
-                  
-                  const floorInfo = article.floorInfo || ''
-                  const floorMatch = floorInfo.match(/^(\d+)\//)
-                  let floor = floorMatch ? parseInt(floorMatch[1]) : (floorInfo.includes('고') ? 15 : floorInfo.includes('중') ? 8 : 3)
-
-                  allListings.push({
-                    price,
-                    area: article.area2 || 0,
-                    supplyArea: article.area1 || 0,
-                    floor,
-                    direction: article.direction || null,
-                    tradetype,
-                    memo: article.articleFeatureDesc || null,
-                    url: null
-                  })
+                  const listing = parseNaverArticle(article)
+                  allListings.push(listing)
                 } catch (e) { /* ignore single item parse error */ }
               }
             }

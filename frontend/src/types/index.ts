@@ -30,7 +30,7 @@ export interface Listing {
   price: number;
   area: number;
   supplyArea: number;
-  floor: number;
+  floor: string;
   direction: string | null;
   memo: string | null;
   url: string | null;
@@ -41,7 +41,7 @@ export interface ListingData {
   price: number;
   area: number;
   supplyArea: number;
-  floor: number;
+  floor: string;
   direction: string | null;
   tradetype: string;
   memo: string | null;

@@ -42,7 +42,7 @@ model Listing {
   price      Int
   area       Float    // 전용면적
   supplyArea Float?   // 계약면적 (공급면적)
-  floor      Int
+  floor      String
   direction  String?
   tradetype  String   // "매매", "전세", "월세"
   memo       String?  // 매물 설명 (articleFeatureDesc)

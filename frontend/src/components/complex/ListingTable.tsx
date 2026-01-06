@@ -163,32 +163,32 @@ export function ListingTable({
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
-              <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleSort('tradetype')}>
+              <TableHead className="cursor-pointer hover:text-primary transition-colors w-[90px]" onClick={() => handleSort('tradetype')}>
                 <div className="flex items-center gap-1.5 justify-center">
-                  거래유형 <ArrowUpDown className="h-3 w-3 opacity-50" />
+                  유형 <ArrowUpDown className="h-3 w-3 opacity-50" />
                 </div>
               </TableHead>
-              <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleSort('price')}>
+              <TableHead className="cursor-pointer hover:text-primary transition-colors w-[120px]" onClick={() => handleSort('price')}>
                 <div className="flex items-center gap-1.5 justify-end">
                   가격 <ArrowUpDown className="h-3 w-3 opacity-50" />
                 </div>
               </TableHead>
-              <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleSort('pricePerPyeong')}>
+              <TableHead className="cursor-pointer hover:text-primary transition-colors w-[110px]" onClick={() => handleSort('pricePerPyeong')}>
                 <div className="flex items-center gap-1.5 justify-end">
                   평단가 <ArrowUpDown className="h-3 w-3 opacity-50" />
                 </div>
               </TableHead>
-              <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleSort('area')}>
+              <TableHead className="cursor-pointer hover:text-primary transition-colors w-[130px]" onClick={() => handleSort('area')}>
                 <div className="flex items-center gap-1.5 justify-center">
-                  면적 <ArrowUpDown className="h-3 w-3 opacity-50" />
+                  공급/전용 <ArrowUpDown className="h-3 w-3 opacity-50" />
                 </div>
               </TableHead>
-              <TableHead className="cursor-pointer hover:text-primary transition-colors text-center" onClick={() => handleSort('floor')}>
+              <TableHead className="cursor-pointer hover:text-primary transition-colors w-[70px] text-center" onClick={() => handleSort('floor')}>
                 층
               </TableHead>
-              <TableHead className="text-center">방향</TableHead>
-              <TableHead className="max-w-[200px]">메모</TableHead>
-              <TableHead className="cursor-pointer hover:text-primary transition-colors text-right" onClick={() => handleSort('scrapedAt')}>
+              <TableHead className="w-[80px] text-center">방향</TableHead>
+              <TableHead className="min-w-[150px]">메모</TableHead>
+              <TableHead className="cursor-pointer hover:text-primary transition-colors w-[120px] text-right" onClick={() => handleSort('scrapedAt')}>
                 수집일시
               </TableHead>
             </TableRow>
@@ -207,10 +207,10 @@ export function ListingTable({
                     {listing.tradetype}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right font-bold text-foreground">
+                <TableCell className="text-right font-bold text-foreground whitespace-nowrap">
                   {formatPrice(listing.price)}
                 </TableCell>
-                <TableCell className="text-right text-muted-foreground text-xs">
+                <TableCell className="text-right text-muted-foreground text-xs whitespace-nowrap">
                   {listing.supplyArea && listing.tradetype === '매매' ? (
                     `${Math.round(listing.price / (listing.supplyArea / 3.3058)).toLocaleString()}만`
                   ) : '-'}
@@ -218,9 +218,9 @@ export function ListingTable({
                 <TableCell className="text-center whitespace-nowrap">
                   {formatArea(listing.supplyArea, listing.area)}
                 </TableCell>
-                <TableCell className="text-center">{listing.floor}층</TableCell>
-                <TableCell className="text-center text-muted-foreground">{listing.direction || '-'}</TableCell>
-                <TableCell className="max-w-[200px] truncate" title={listing.memo || ''}>
+                <TableCell className="text-center whitespace-nowrap">{listing.floor}층</TableCell>
+                <TableCell className="text-center text-muted-foreground whitespace-nowrap">{listing.direction || '-'}</TableCell>
+                <TableCell className="max-w-0" title={listing.memo || ''}>
                   <p className="text-xs text-muted-foreground truncate">
                     {listing.memo || '-'}
                   </p>
