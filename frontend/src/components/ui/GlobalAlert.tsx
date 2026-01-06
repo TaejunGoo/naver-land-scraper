@@ -1,6 +1,7 @@
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -20,6 +21,9 @@ export function GlobalAlert() {
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
+          {onConfirm && (
+            <AlertDialogCancel onClick={closeAlert}>취소</AlertDialogCancel>
+          )}
           <AlertDialogAction
             onClick={() => {
               if (onConfirm) onConfirm();

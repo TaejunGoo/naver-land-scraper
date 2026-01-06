@@ -57,7 +57,7 @@ export function ComplexListHeader({
             <RefreshCw
               className={`w-4 h-4 mr-2 ${isScrapingAll ? "animate-spin" : ""}`}
             />
-            {isScrapingAll ? "크롤링 중..." : "전체 매물 크롤링"}
+            {isScrapingAll ? "갱신 중..." : "전체 매물 갱신"}
           </Button>
           <Button onClick={onAddClick}>
             <Plus className="w-4 h-4 mr-2" />

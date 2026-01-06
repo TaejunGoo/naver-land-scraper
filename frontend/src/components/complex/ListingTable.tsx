@@ -123,11 +123,11 @@ export function ListingTable({
               variant="destructive"
               size="sm"
               onClick={() => {
-                showAlert({
-                  title: "선택 삭제 확인",
-                  description: `${selectedListings.size}개의 매물을 정말 삭제하시겠습니까?`,
-                  onConfirm: () => batchDeleteMutation.mutate(Array.from(selectedListings))
-                })
+                showAlert(
+                  "선택 삭제 확인",
+                  `${selectedListings.size}개의 매물을 정말 삭제하시겠습니까?`,
+                  () => batchDeleteMutation.mutate(Array.from(selectedListings))
+                )
               }}
               disabled={batchDeleteMutation.isPending}
               className="h-8 text-xs gap-1.5"
@@ -141,11 +141,11 @@ export function ListingTable({
               variant="outline"
               size="sm"
               onClick={() => {
-                showAlert({
-                  title: "전체 삭제 경고",
-                  description: "이 단지의 모든 수집된 매물 데이터가 삭제됩니다. 계속하시겠습니까?",
-                  onConfirm: () => deleteAllMutation.mutate()
-                })
+                showAlert(
+                  "전체 삭제 경고",
+                  "이 단지의 모든 수집된 매물 데이터가 삭제됩니다. 계속하시겠습니까?",
+                  () => deleteAllMutation.mutate()
+                )
               }}
               disabled={deleteAllMutation.isPending}
               className="h-8 text-xs text-destructive hover:bg-destructive/10 border-destructive/30"

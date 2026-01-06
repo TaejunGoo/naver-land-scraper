@@ -160,32 +160,63 @@ export async function scrapeNaverListings(naverComplexId: string): Promise<Listi
   let browser
   
   try {
-    console.log(`Puppeteer를 통한 매물 크롤링 시작: 단지 ID ${naverComplexId}`)
+    console.log(`매물 크롤링 시작 (Headless): 단지 ID ${naverComplexId}`)
     
     browser = await puppeteer.launch({
-      headless: false,
+      headless: "new", // 최신 Puppeteer의 감지 회피가 강화된 headless 모드
       args: [
-        '--no-sandbox', 
+        '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-blink-features=AutomationControlled',
         '--window-size=1920,1080',
-        '--disable-dev-shm-usage'
+        '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        '--lang=ko-KR,ko'
       ],
       ignoreDefaultArgs: ['--enable-automation']
     })
     
     const page = await browser.newPage()
     
+    // 봇 감지 우회를 위한 고급 스크립트
     await page.evaluateOnNewDocument(() => {
-      (navigator as any).webdriver = false
-      ;(window as any).chrome = { runtime: {} }
+      // webdriver 속성 제거
+      Object.defineProperty(navigator, 'webdriver', { get: () => false });
+      
+      // chrome 변수 위조
+      (window as any).chrome = { runtime: {} };
+      
+      // 플러그인 개수 위조 (봇은 보통 0개)
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+      
+      // 언어 설정 고정
+      Object.defineProperty(navigator, 'languages', { get: () => ['ko-KR', 'ko', 'en-US', 'en'] });
     })
+
+    // 실제 브라우저처럼 보이게 하기 위한 추가 헤더
+    await page.setExtraHTTPHeaders({
+      'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'upgrade-insecure-requests': '1',
+      'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      'accept-encoding': 'gzip, deflate, br',
+      'accept-language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+    })
+
+    // (기존 리소스 차단 로직 유지)
+    await page.setRequestInterception(true)
+    page.on('request', (req) => {
+      if (['image', 'font', 'media'].includes(req.resourceType())) {
+        req.abort()
+      } else {
+        req.continue()
+      }
+    })
+
+    const url = `https://new.land.naver.com/complexes/${naverComplexId}`
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 })
     
-    await page.setViewport({ width: 1920, height: 1080 })
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-    )
-    
+    // (이후 수집 및 검증 로직 동일)
     const allListings: ListingData[] = []
     
     // API 응답 가로채기
@@ -283,14 +314,6 @@ export async function scrapeNaverListings(naverComplexId: string): Promise<Listi
           // JSON 파싱 실패는 무시
         }
       }
-    })
-    
-    const url = `https://new.land.naver.com/complexes/${naverComplexId}`
-    console.log(`페이지 로딩: ${url}`)
-    
-    await page.goto(url, { 
-      waitUntil: 'networkidle2',
-      timeout: 60000 
     })
     
     // 초기 로딩 대기

@@ -1,20 +1,23 @@
-import { useState, useMemo, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { ExternalLink, RefreshCw, Info } from "lucide-react";
 import { complexApi, listingApi, type Listing } from "@/lib/api";
 import { formatDateKST, getTodayKST } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { useAlertStore } from "@/lib/store";
+import { useAlertStore, useHeaderStore } from "@/lib/store";
 import { ComplexInfo } from "@/components/complex/ComplexInfo";
 import { ListingChart } from "@/components/complex/ListingChart";
 import { ListingFilters } from "@/components/complex/ListingFilters";
 import { ListingTable } from "@/components/complex/ListingTable";
+import { Badge } from "@/components/ui/badge";
 
 export default function ComplexDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const setHeader = useHeaderStore((state) => state.setHeader);
+  const resetHeader = useHeaderStore((state) => state.resetHeader);
 
   // 상태 관리
   const [sortBy, setSortBy] = useState<string>("scrapedAt");
@@ -30,6 +33,7 @@ export default function ComplexDetail() {
   });
   const [selectedAreas, setSelectedAreas] = useState<Set<string>>(new Set());
   const [isScraping, setIsScraping] = useState(false);
+  const [isRefreshingInfo, setIsRefreshingInfo] = useState(false);
   const { showAlert } = useAlertStore();
 
   // 단지 정보 조회
@@ -46,6 +50,103 @@ export default function ComplexDetail() {
       listingApi.getByComplexId(Number(id)).then((res) => res.data),
     enabled: !!id,
   });
+
+  // 매물 수집 실행
+  const scrapeMutation = useMutation({
+    mutationFn: () => complexApi.scrape(Number(id)),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["complex", id] });
+      queryClient.invalidateQueries({ queryKey: ["listings", id] });
+      setIsScraping(false);
+      showAlert("매물 갱신 완료", `${res.data.count}개의 매물을 업데이트했습니다.`);
+    },
+    onError: (err: any) => {
+      setIsScraping(false);
+      showAlert(
+        "급매물 갱신 실패",
+        err.response?.data?.message || "오류가 발생했습니다."
+      );
+    },
+  });
+
+  // 단지 상세 정보 수집 실행
+  const scrapeInfoMutation = useMutation({
+    mutationFn: () => complexApi.scrapeInfo(Number(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["complex", id] });
+      setIsRefreshingInfo(false);
+      showAlert("정보 갱신 완료", "단지 상세 정보를 업데이트했습니다.");
+    },
+    onError: (err: any) => {
+      setIsRefreshingInfo(false);
+      showAlert(
+        "정보 갱신 실패",
+        err.response?.data?.message || "오류가 발생했습니다."
+      );
+    },
+  });
+
+  const handleScrape = useCallback(() => {
+    if (isScraping) return;
+    setIsScraping(true);
+    scrapeMutation.mutate();
+  }, [isScraping, scrapeMutation]);
+
+  const handleScrapeInfo = useCallback(() => {
+    if (isRefreshingInfo) return;
+    setIsRefreshingInfo(true);
+    scrapeInfoMutation.mutate();
+  }, [isRefreshingInfo, scrapeInfoMutation]);
+
+  useEffect(() => {
+    if (complex) {
+      setHeader({
+        title: (
+          <div className="flex flex-col">
+            <span className="font-semibold text-slate-900 leading-tight">{complex.name}</span>
+            <span className="text-xs text-slate-500 font-normal">{complex.address}</span>
+          </div>
+        ),
+        showBackButton: true,
+        actions: (
+          <div className="flex items-center gap-2">
+            <Link
+              to={`https://new.land.naver.com/complexes/${complex.naverComplexId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:inline-flex"
+            >
+              <Button variant="outline" size="sm" className="gap-1.5 h-9">
+                <ExternalLink className="w-3.5 h-3.5" />
+                네이버 부동산
+              </Button>
+            </Link>
+            <Button
+              variant="outline"
+              onClick={handleScrapeInfo}
+              disabled={isRefreshingInfo}
+              size="sm"
+              className="gap-1.5 h-9"
+            >
+              <Info className={`w-3.5 h-3.5 ${isRefreshingInfo ? "animate-spin" : ""}`} />
+              정보 갱신
+            </Button>
+            <Button
+              onClick={handleScrape}
+              disabled={isScraping}
+              size="sm"
+              className="gap-1.5 h-9"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isScraping ? "animate-spin" : ""}`} />
+              매물 갱신
+            </Button>
+          </div>
+        )
+      });
+    }
+
+    return () => resetHeader();
+  }, [complex, isScraping, isRefreshingInfo, handleScrape, handleScrapeInfo]);
 
   // 면적 옵션 추출
   const areaOptions = useMemo(() => {
@@ -147,20 +248,6 @@ export default function ComplexDetail() {
     };
   }, [allListings]);
 
-  // 매물 수집 뮤테이션
-  const scrapeMutation = useMutation({
-    mutationFn: () => complexApi.scrape(Number(id)),
-    onMutate: () => setIsScraping(true),
-    onSettled: () => setIsScraping(false),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["listings", id] });
-      showAlert("수집 완료", "매물 수집이 완료되었습니다.");
-    },
-    onError: (error: any) => {
-      showAlert("수집 실패", `수집 중 오류가 발생했습니다: ${error.message}`);
-    },
-  });
-
   const handleSort = (field: string) => {
     if (sortBy === field) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -201,45 +288,25 @@ export default function ComplexDetail() {
   if (!complex) return <div>단지를 찾을 수 없습니다.</div>;
 
   return (
-    <div className="max-w-7xl mx-auto p-4 space-y-6 pb-20">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/")}
-          className="pl-0 hover:pl-2 transition-all"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          목록으로
-        </Button>
-        <div className="flex gap-2">
-          <Button
-            onClick={() => scrapeMutation.mutate()}
-            disabled={isScraping}
-            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-          >
-            <RefreshCw
-              className={`w-4 h-4 mr-2 ${isScraping ? "animate-spin" : ""}`}
-            />
-            {isScraping ? "매물 수집 중..." : "매물 수집"}
-          </Button>
+    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+        <div className="lg:col-span-5 xl:col-span-4 h-full">
+          <ComplexInfo
+            complex={complex}
+            currentListingCounts={currentListingCounts}
+          />
+        </div>
+        <div className="lg:col-span-7 xl:col-span-8 h-full">
+          {/* 차트 */}
+          <ListingChart
+            allListings={allListings}
+            selectedAreas={selectedAreas}
+            setSelectedAreas={setSelectedAreas}
+            handleAreaChange={handleAreaChange}
+            areaOptions={areaOptions}
+          />
         </div>
       </div>
-
-      {/* 단지 정보 */}
-      <ComplexInfo
-        complex={complex}
-        currentListingCounts={currentListingCounts}
-      />
-
-      {/* 차트 */}
-      <ListingChart
-        allListings={allListings}
-        selectedAreas={selectedAreas}
-        setSelectedAreas={setSelectedAreas}
-        handleAreaChange={handleAreaChange}
-        areaOptions={areaOptions}
-      />
 
       {/* 매물 목록 섹션 */}
       <div className="space-y-4 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 shadow-sm">

@@ -21,6 +21,7 @@ interface ComplexFormProps {
   setFormData: (data: any) => void;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
+  onDelete?: () => void;
   isSubmitting: boolean;
 }
 
@@ -30,6 +31,7 @@ export function ComplexForm({
   setFormData,
   onSubmit,
   onCancel,
+  onDelete,
   isSubmitting,
 }: ComplexFormProps) {
   const handleCheckboxChange = (line: string, checked: boolean) => {
@@ -126,13 +128,25 @@ export function ComplexForm({
             />
           </div>
 
-          <div className="flex gap-2">
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "저장 중..." : "저장"}
-            </Button>
-            <Button type="button" variant="outline" onClick={onCancel}>
-              취소
-            </Button>
+          <div className="flex justify-between items-center pt-2">
+            <div className="flex gap-2">
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "저장 중..." : "저장"}
+              </Button>
+              <Button type="button" variant="outline" onClick={onCancel}>
+                취소
+              </Button>
+            </div>
+            {editingId && onDelete && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={onDelete}
+                disabled={isSubmitting}
+              >
+                삭제
+              </Button>
+            )}
           </div>
         </form>
       </CardContent>

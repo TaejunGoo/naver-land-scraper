@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import {
   RefreshCw,
   Edit,
@@ -7,6 +8,7 @@ import {
   Building,
   FileText,
   ExternalLink,
+  Trash2,
 } from "lucide-react";
 import { complexApi, type Complex } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -22,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { SUBWAY_LINES, getTagColor } from "@/lib/constants";
+import { formatDateKST } from "@/lib/format";
 
 interface ComplexInfoProps {
   complex: Complex;
@@ -38,6 +41,7 @@ export function ComplexInfo({
   currentListingCounts,
 }: ComplexInfoProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { showAlert } = useAlertStore();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Complex>>({});
@@ -84,20 +88,25 @@ export function ComplexInfo({
     },
   });
 
-  const scrapeInfoMutation = useMutation({
-    mutationFn: () => complexApi.scrapeInfo(complex.id),
+  const deleteMutation = useMutation({
+    mutationFn: () => complexApi.delete(complex.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["complex", String(complex.id)],
-      });
-      showAlert("수집 성공", "단지 정보 수집에 성공했습니다.");
+      queryClient.invalidateQueries({ queryKey: ["complexes"] });
+      showAlert("삭제 완료", "단지가 성공적으로 삭제되었습니다.");
+      navigate("/");
     },
-    onError: (error: any) => {
-      const errorMessage =
-        error?.response?.data?.error || error?.message || "수집 실패";
-      showAlert("수집 실패", `단지 정보 수집 중 오류가 발생했습니다: ${errorMessage}`);
+    onError: () => {
+      showAlert("삭제 실패", "단지를 삭제하는 중 오류가 발생했습니다.");
     },
   });
+
+  const handleDelete = () => {
+    showAlert(
+      "단지 삭제",
+      `'${complex.name}' 단지를 삭제하시겠습니까? 관련 매물 데이터도 모두 삭제됩니다.`,
+      () => deleteMutation.mutate()
+    );
+  };
 
   const handleUpdate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,7 +135,7 @@ export function ComplexInfo({
 
   return (
     <>
-      <Card>
+      <Card className="h-full flex flex-col">
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
@@ -144,7 +153,6 @@ export function ComplexInfo({
                         .map((t) => t.trim())
                         .filter((t) => t);
                     }
-                    console.log("Tags:", tags);
                     return tags.map((tag, index) => (
                       <Badge
                         key={index}
@@ -160,23 +168,17 @@ export function ComplexInfo({
               )}
             </div>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => scrapeInfoMutation.mutate()}
-                disabled={
-                  scrapeInfoMutation.isPending || !complex.naverComplexId
-                }
-              >
-                <RefreshCw
-                  className={`w-4 h-4 mr-2 ${
-                    scrapeInfoMutation.isPending ? "animate-spin" : ""
-                  }`}
-                />
-                {scrapeInfoMutation.isPending
-                  ? "정보 수집 중..."
-                  : "단지 정보 수집"}
-              </Button>
+              {isEditing && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  삭제
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -323,8 +325,9 @@ export function ComplexInfo({
                     </span>
                     <p className="font-medium text-slate-900 dark:text-slate-200">
                       {complex.units
-                        ? `${complex.units.toLocaleString()}세대`
+                        ? `${complex.units.toLocaleString()}`
                         : "-"}
+                      <span className="text-xs">세대</span>
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -343,7 +346,7 @@ export function ComplexInfo({
                       {complex.approvalDate ? (
                         <span>
                           {complex.approvalDate.substring(0, 4)}년
-                          <span className="text-xs text-slate-500 ml-1">
+                          <span className="block text-xs text-slate-500">
                             (
                             {new Date().getFullYear() -
                               parseInt(complex.approvalDate.substring(0, 4)) +
@@ -369,72 +372,59 @@ export function ComplexInfo({
                 </div>
               </div>
 
-              {/* 추가 정보 및 메모 */}
-              <div className="grid md:grid-cols-2 gap-6 pt-2">
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    <Info className="w-4 h-4 text-slate-500" /> 추가 정보
-                  </h3>
-                  <div className="space-y-3 text-sm border-t border-slate-100 dark:border-slate-700 pt-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-500 dark:text-slate-400">
-                        사용승인일
-                      </span>
-                      <span className="font-medium">
-                        {complex.approvalDate || "-"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-500 dark:text-slate-400">
-                        네이버 ID
-                      </span>
-                      <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-xs text-slate-600 dark:text-slate-300">
-                        {complex.naverComplexId || "미설정"}
-                      </span>
-                    </div>
-                    {complex.naverComplexId && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500 dark:text-slate-400">
-                          네이버 부동산
-                        </span>
-                        <a
-                          href={`https://new.land.naver.com/complexes/${complex.naverComplexId}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline flex items-center gap-1 text-xs"
-                        >
-                          바로가기 <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </div>
+              {/* 추가 정보 */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                  <Info className="w-4 h-4 text-slate-500" /> 추가 정보
+                </h3>
+                <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 dark:text-slate-400">사용승인일</span>
+                    <span className="font-medium">{complex.approvalDate || "-"}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 dark:text-slate-400">네이버 ID</span>
+                    <span className="font-mono bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600 text-[11px] text-slate-600 dark:text-slate-300">
+                      {complex.naverComplexId || "-"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 dark:text-slate-400">정보갱신일</span>
+                    <span className="font-medium">{complex.infoScrapedAt ? formatDateKST(new Date(complex.infoScrapedAt)) : ""}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 dark:text-slate-400">네이버 부동산</span>
+                    {complex.naverComplexId ? (
+                      <a
+                        href={`https://new.land.naver.com/complexes/${complex.naverComplexId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline flex items-center gap-1 text-[11px] font-medium"
+                      >
+                        링크 이동 <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ) : (
+                      <span className="text-slate-400">-</span>
                     )}
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-500 dark:text-slate-400">
-                        정보 업데이트
-                      </span>
-                      <span className="text-xs text-slate-400">
-                        {complex.infoScrapedAt
-                          ? new Date(complex.infoScrapedAt).toLocaleDateString()
-                          : "-"}
-                      </span>
-                    </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-slate-500" /> 메모
-                  </h3>
-                  <div className="bg-yellow-50/50 dark:bg-yellow-900/10 rounded-xl p-4 text-sm text-slate-700 dark:text-slate-300 min-h-[100px] border border-yellow-100 dark:border-yellow-900/20">
-                    {complex.customNotes ? (
-                      <p className="whitespace-pre-wrap leading-relaxed">
-                        {complex.customNotes}
-                      </p>
-                    ) : (
-                      <p className="text-slate-400 italic">
-                        등록된 메모가 없습니다.
-                      </p>
-                    )}
-                  </div>
+              {/* 커스텀 메모 */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-slate-500" /> 단지 메모
+                </h3>
+                <div className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-xl p-4 min-h-[120px]">
+                  {complex.customNotes ? (
+                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                      {complex.customNotes}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-slate-400 italic">
+                      등록된 메모가 없습니다. [수정] 버튼을 눌러 메모를 입력해 보세요.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

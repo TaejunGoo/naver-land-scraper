@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { complexApi, type Complex } from "@/lib/api";
-import { useAlertStore } from "@/lib/store";
+import { useAlertStore, useHeaderStore } from "@/lib/store";
 import {
   Card,
   CardContent,
@@ -27,6 +27,17 @@ export default function ComplexList() {
   const { showAlert } = useAlertStore();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const setHeader = useHeaderStore((state) => state.setHeader);
+  const resetHeader = useHeaderStore((state) => state.resetHeader);
+
+  useEffect(() => {
+    setHeader({
+      title: "대시보드",
+      actions: null,
+      showBackButton: false
+    });
+    return () => resetHeader();
+  }, [setHeader, resetHeader]);
 
   const { data: complexes, isLoading } = useQuery({
     queryKey: ["complexes"],
@@ -117,8 +128,20 @@ export default function ComplexList() {
     mutationFn: (id: number) => complexApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["complexes"] });
+      showAlert("삭제 완료", "단지가 성공적으로 삭제되었습니다.");
+    },
+    onError: () => {
+      showAlert("삭제 실패", "단지를 삭제하는 중 오류가 발생했습니다.");
     },
   });
+
+  const handleDeleteComplex = (complex: Complex) => {
+    showAlert(
+      "단지 삭제",
+      `'${complex.name}' 단지를 삭제하시겠습니까? 관련 매물 데이터도 모두 삭제됩니다.`,
+      () => deleteMutation.mutate(complex.id)
+    );
+  };
 
   const scrapeAllMutation = useMutation({
     mutationFn: () => complexApi.scrapeAll(),
@@ -261,6 +284,11 @@ export default function ComplexList() {
           setFormData={setFormData}
           onSubmit={handleSubmit}
           onCancel={resetForm}
+          onDelete={
+            editingId
+              ? () => handleDeleteComplex(complexes?.find((c) => c.id === editingId)!)
+              : undefined
+          }
           isSubmitting={createMutation.isPending || updateMutation.isPending}
         />
       )}
@@ -271,7 +299,7 @@ export default function ComplexList() {
             key={complex.id}
             complex={complex}
             onEdit={handleEdit}
-            onDelete={(id) => deleteMutation.mutate(id)}
+            onDelete={() => handleDeleteComplex(complex)}
             isDeleting={deleteMutation.isPending}
           />
         ))}

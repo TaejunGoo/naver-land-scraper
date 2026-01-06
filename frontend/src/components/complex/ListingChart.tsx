@@ -205,7 +205,7 @@ export function ListingChart({
   if (!allListings || allListings.length === 0) return null;
 
   return (
-    <div className="bg-card border rounded-xl shadow-sm overflow-hidden flex flex-col">
+    <div className="bg-card border rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
       {/* 헤더 및 필터 영역 */}
       <div className="px-6 py-5 border-b space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -228,20 +228,20 @@ export function ListingChart({
               onValueChange={(value) => value && setChartTradeType(value)}
               className="bg-muted p-1 rounded-lg h-9"
             >
-              <ToggleGroupItem value="매매" className="text-xs px-3 data-[state=on]:bg-white data-[state=on]:shadow-sm">매매</ToggleGroupItem>
-              <ToggleGroupItem value="전세" className="text-xs px-3 data-[state=on]:bg-white data-[state=on]:shadow-sm">전세</ToggleGroupItem>
-              <ToggleGroupItem value="월세" className="text-xs px-3 data-[state=on]:bg-white data-[state=on]:shadow-sm">월세</ToggleGroupItem>
+              <ToggleGroupItem value="매매" className="text-xs px-3 data-[state=on]:bg-black data-[state=on]:text-white data-[state=on]:shadow-sm">매매</ToggleGroupItem>
+              <ToggleGroupItem value="전세" className="text-xs px-3 data-[state=on]:bg-black data-[state=on]:text-white data-[state=on]:shadow-sm">전세</ToggleGroupItem>
+              <ToggleGroupItem value="월세" className="text-xs px-3 data-[state=on]:bg-black data-[state=on]:text-white data-[state=on]:shadow-sm">월세</ToggleGroupItem>
             </ToggleGroup>
           </div>
         </div>
 
         <Separator />
 
-        <div className="flex flex-wrap items-center gap-6">
+        <div className="flex flex-wrap gap-6">
           {/* 기간 선택 */}
           <div className="space-y-2">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">조회 기간</span>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <div className="flex p-1 bg-muted rounded-lg">
                 {[
                   { value: 7, label: "7일" },
@@ -291,11 +291,11 @@ export function ListingChart({
 
           {/* 면적 필터 (배지 형태) */}
           <div className="space-y-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">면적 필터</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">전용면적 선택</span>
             <div className="flex flex-wrap gap-1.5">
               <Badge
                 variant={selectedAreas.size === 0 || selectedAreas.size === areaOptions.length ? "secondary" : "outline"}
-                className="cursor-pointer transition-all hover:scale-105 hover:bg-muted"
+                className="cursor-pointer transition-all hover:scale-105 hover:bg-muted h-[34px]"
                 onClick={() => {
                   if (selectedAreas.size === areaOptions.length) {
                     setSelectedAreas(new Set());
@@ -335,7 +335,7 @@ export function ListingChart({
               <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={chartData}
-                margin={{ top: 10, right: 30, left: 10, bottom: 0 }}
+                margin={{ top: 20, right: 10, left: -10, bottom: 10 }}
               >
                 <defs>
                   <linearGradient id="colorBand" x1="0" y1="0" x2="0" y2="1">
@@ -350,27 +350,30 @@ export function ListingChart({
                 />
                 <XAxis
                   dataKey="displayDate"
-                  tick={{ fontSize: 12, fill: "#64748b" }}
+                  tick={{ fontSize: 11, fill: "#64748b" }}
                   angle={-45}
                   textAnchor="end"
-                  height={70}
+                  height={60}
                   stroke="#cbd5e1"
+                  interval="preserveStartEnd"
                 />
                 <YAxis
                   yAxisId="left"
-                  tick={{ fontSize: 12, fill: "#64748b" }}
+                  tick={{ fontSize: 11, fill: "#64748b" }}
                   tickFormatter={(value) => `${(value / 10000).toFixed(0)}억`}
                   stroke="#cbd5e1"
+                  width={45}
                 />
                 <YAxis
                   yAxisId="right"
                   orientation="right"
-                  tick={{ fontSize: 12, fill: "#64748b" }}
+                  tick={{ fontSize: 11, fill: "#64748b" }}
                   stroke="#cbd5e1"
+                  width={25}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
-                  wrapperStyle={{ paddingTop: "20px" }}
+                  wrapperStyle={{ paddingTop: "10px" }}
                   iconType="circle"
                 />
 
