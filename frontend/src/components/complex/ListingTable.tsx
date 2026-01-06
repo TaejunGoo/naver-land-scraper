@@ -84,7 +84,7 @@ export function ListingTable({
     return (
       <div className="flex flex-col items-center justify-center py-20 bg-muted/30 rounded-lg border-2 border-dashed">
         <p className="text-muted-foreground font-medium mb-4">수집된 매물 정보가 없습니다.</p>
-        <p className="text-sm text-muted-foreground/70">상단의 크롤링 버튼을 눌러 매물을 수집해 보세요.</p>
+        <p className="text-sm text-muted-foreground/70">상단의 갱신 버튼을 눌러 매물을 수집해 보세요.</p>
       </div>
     )
   }

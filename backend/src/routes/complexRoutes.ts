@@ -11,28 +11,25 @@ router.get('/', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     })
     
-    // 대한민국 표준시(KST) 기준 오늘 자정 계산
+    // 대한민국 표준시(KST) 기준 오늘 시작/종료 시점 계산
     const now = new Date()
-    const kstOffset = 9 * 60 * 60 * 1000
-    const kstNow = new Date(now.getTime() + kstOffset)
-    const kstTodayStart = new Date(
-      Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate())
-    )
+    const kstNow = new Date(now.getTime() + (9 * 60 * 60 * 1000))
+    const todayKST = new Date(Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()))
     
-    // DB 쿼리를 위해 다시 UTC로 변환 (00:00 KST = 15:00 UTC of previous day)
-    const today = new Date(kstTodayStart.getTime() - kstOffset)
-    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
+    // DB 쿼리를 위한 UTC 시간 (KST 00:00 = UTC 전날 15:00)
+    const startTime = new Date(todayKST.getTime() - (9 * 60 * 60 * 1000))
+    const endTime = new Date(startTime.getTime() + (24 * 60 * 60 * 1000))
     
     // 각 단지의 오늘 매물 수 계산 (유형별)
     const complexesWithCount = await Promise.all(
-      complexes.map(async (complex) => {
+      complexes.map(async (complex: any) => {
         const todayCounts = await prisma.listing.groupBy({
           by: ['tradetype'],
           where: {
             complexId: complex.id,
             scrapedAt: {
-              gte: today,
-              lt: tomorrow
+              gte: startTime,
+              lt: endTime
             }
           },
           _count: true
@@ -45,7 +42,7 @@ router.get('/', async (req, res) => {
           rent: 0     // 월세
         }
 
-        todayCounts.forEach(item => {
+        todayCounts.forEach((item: { tradetype: string; _count: number }) => {
           const count = item._count
           counts.total += count
           if (item.tradetype === '매매') counts.sale = count
@@ -155,40 +152,40 @@ router.post('/:id/scrape', async (req, res) => {
       return res.status(400).json({ error: 'Complex not found or missing Naver ID' })
     }
     
-    // 당일 데이터 삭제 (중복 방지) - KST 기준
+    // 대한민국 표준시(KST) 기준 오늘 시작/종료 시점 계산
     const now = new Date()
-    const kstOffset = 9 * 60 * 60 * 1000
-    const kstNow = new Date(now.getTime() + kstOffset)
-    const kstTodayStart = new Date(
-      Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate())
-    )
-    const today = new Date(kstTodayStart.getTime() - kstOffset)
-    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
+    const kstNow = new Date(now.getTime() + (9 * 60 * 60 * 1000))
+    const todayKST = new Date(Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()))
+    
+    const startTime = new Date(todayKST.getTime() - (9 * 60 * 60 * 1000))
+    const endTime = new Date(startTime.getTime() + (24 * 60 * 60 * 1000))
     
     await prisma.listing.deleteMany({
       where: {
         complexId: complexId,
         scrapedAt: {
-          gte: today,
-          lt: tomorrow
+          gte: startTime,
+          lt: endTime
         }
       }
     })
     
     console.log(`${complex.name}의 당일 데이터 삭제 완료`)
     
-    const listings = await scrapeNaverListings(complex.naverComplexId)
+    const startTimeScrape = Date.now()
+    const scraperResults = await scrapeNaverListings(complex.naverComplexId)
+    const duration = ((Date.now() - startTimeScrape) / 1000).toFixed(1)
+    const scrapeTimestamp = new Date() // 모든 매물에 동일한 수집 시각 부여
     
-    // Save new listings to database with duplicate check (URL 기반)
-    let savedCount = 0
-    for (const listing of listings) {
-      await prisma.listing.create({
-        data: {
+    // Save new listings to database using Bulk Insert (createMany)
+    if (scraperResults.length > 0) {
+      await prisma.listing.createMany({
+        data: scraperResults.map(l => ({
           complexId: complexId,
-          ...listing
-        }
+          ...l,
+          scrapedAt: scrapeTimestamp
+        }))
       })
-      savedCount++
     }
     
     // Update lastScrapedAt
@@ -197,8 +194,8 @@ router.post('/:id/scrape', async (req, res) => {
       data: { lastScrapedAt: new Date() }
     })
     
-    console.log(`${complex.name}에 ${savedCount}개의 새 매물 저장 완료 (총 ${listings.length}개 수집, ${listings.length - savedCount}개 중복 제외)`)
-    res.json({ success: true, count: savedCount, total: listings.length })
+    console.log(`${complex.name}: ${scraperResults.length}개 매물 저장 완료 (소요시간: ${duration}초)`)
+    res.json({ success: true, count: scraperResults.length, total: scraperResults.length })
   } catch (error) {
     console.error('Scraping error:', error)
     res.status(500).json({ error: 'Failed to scrape listings' })
@@ -244,6 +241,7 @@ router.post('/:id/scrape-info', async (req, res) => {
 
 // Scrape all complexes' listings
 router.post('/scrape-all/listings', async (req, res) => {
+  const globalStartTime = Date.now()
   try {
     const complexes = await prisma.complex.findMany({
       where: {
@@ -256,79 +254,99 @@ router.post('/scrape-all/listings', async (req, res) => {
     }
 
     const results = []
+    const CONCURRENCY = 2 // 로컬 환경 부하를 고려하여 2개씩 병렬 처리
     
-    for (const complex of complexes) {
-      try {
-        console.log(`크롤링 시작: ${complex.name}`)
-        
-        // 당일 데이터 삭제 (중복 방지) - KST 기준
-        const now = new Date()
-        const kstOffset = 9 * 60 * 60 * 1000
-        const kstNow = new Date(now.getTime() + kstOffset)
-        const kstTodayStart = new Date(
-          Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate())
-        )
-        const today = new Date(kstTodayStart.getTime() - kstOffset)
-        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
-        
-        await prisma.listing.deleteMany({
-          where: {
-            complexId: complex.id,
-            scrapedAt: {
-              gte: today,
-              lt: tomorrow
-            }
-          }
-        })
-
-        const listings = await scrapeNaverListings(complex.naverComplexId!)
-        
-        // Save new listings to database with duplicate check (URL 기반)
-        let savedCount = 0
-        for (const listing of listings) {
-          await prisma.listing.create({
-            data: {
+    for (let i = 0; i < complexes.length; i += CONCURRENCY) {
+      const batch = complexes.slice(i, i + CONCURRENCY)
+      console.log(`\n>>> 배치 실행 (${i + 1}~${Math.min(i + CONCURRENCY, complexes.length)} / 총 ${complexes.length}개)`)
+      
+      const batchPromises = batch.map(async (complex) => {
+        const startTime = Date.now()
+        try {
+          console.log(`[시작] ${complex.name}`)
+          
+          // 대한민국 표준시(KST) 기준 오늘 시작/종료 시점 계산
+          const now = new Date()
+          const kstNow = new Date(now.getTime() + (9 * 60 * 60 * 1000))
+          const todayKST = new Date(Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()))
+          
+          const dbStartTime = new Date(todayKST.getTime() - (9 * 60 * 60 * 1000))
+          const endTime = new Date(dbStartTime.getTime() + (24 * 60 * 60 * 1000))
+          
+          await prisma.listing.deleteMany({
+            where: {
               complexId: complex.id,
-              ...listing
+              scrapedAt: {
+                gte: dbStartTime,
+                lt: endTime
+              }
             }
           })
-          savedCount++
+
+          const listings = await scrapeNaverListings(complex.naverComplexId!)
+          const scrapeTimestamp = new Date()
+          
+          // Save new listings using Bulk Insert
+          if (listings.length > 0) {
+            await prisma.listing.createMany({
+              data: listings.map(l => ({
+                complexId: complex.id,
+                ...l,
+                scrapedAt: scrapeTimestamp
+              }))
+            })
+          }
+          
+          // Update lastScrapedAt
+          await prisma.complex.update({
+            where: { id: complex.id },
+            data: { lastScrapedAt: new Date() }
+          })
+          
+          const duration = ((Date.now() - startTime) / 1000).toFixed(1)
+          console.log(`[완료] ${complex.name}: ${listings.length}개 저장 (${duration}초)`)
+          
+          return {
+            complexId: complex.id,
+            complexName: complex.name,
+            count: listings.length,
+            total: listings.length,
+            success: true,
+            duration
+          }
+        } catch (error) {
+          console.error(`[실패] ${complex.name}:`, error)
+          return {
+            complexId: complex.id,
+            complexName: complex.name,
+            count: 0,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }
         }
-        
-        // Update lastScrapedAt
-        await prisma.complex.update({
-          where: { id: complex.id },
-          data: { lastScrapedAt: new Date() }
-        })
-        
-        console.log(`${complex.name}: ${savedCount}개 매물 저장 완료 (총 ${listings.length}개 수집, ${listings.length - savedCount}개 중복 제외)`)
-        results.push({
-          complexId: complex.id,
-          complexName: complex.name,
-          count: savedCount,
-          total: listings.length,
-          success: true
-        })
-      } catch (error) {
-        console.error(`${complex.name} 크롤링 실패:`, error)
-        results.push({
-          complexId: complex.id,
-          complexName: complex.name,
-          count: 0,
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        })
-      }
+      })
+      
+      const batchResults = await Promise.all(batchPromises)
+      results.push(...batchResults)
     }
 
+    const totalDuration = ((Date.now() - globalStartTime) / 1000).toFixed(1)
     const totalCount = results.reduce((sum, r) => sum + r.count, 0)
     const successCount = results.filter(r => r.success).length
     
+    console.log(`\n==========================================`)
+    console.log(`전체 크롤링 완료!`)
+    console.log(`- 총 단지: ${complexes.length}개 (성공: ${successCount})`)
+    console.log(`- 총 매물: ${totalCount}개`)
+    console.log(`- 전체 소요 시간: ${totalDuration}초`)
+    console.log(`==========================================\n`)
+
     res.json({
       success: true,
       totalComplexes: complexes.length,
       successComplexes: successCount,
       totalListings: totalCount,
+      totalDuration,
       results
     })
   } catch (error) {

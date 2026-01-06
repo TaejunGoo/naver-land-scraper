@@ -43,12 +43,17 @@ export function formatArea(supplyArea: number | null, exclusiveArea: number): st
  * Date 객체나 날짜 문자열을 KST(UTC+9) 기준 "YYYY-MM-DD" 문자열로 변환
  */
 export function formatDateKST(date: Date | string | number): string {
+  if (!date) return '';
   const d = new Date(date);
   if (isNaN(d.getTime())) return '';
   
-  // Date.getTime()은 항상 UTC 기준입니다.
-  // KST는 UTC+9이므로 9시간을 더한 뒤 ISO 문자열을 추출합니다.
-  const kstDate = new Date(d.getTime() + (9 * 60 * 60 * 1000));
+  // UTC 시간에 9시간(KST 오프셋)을 더한 시각을 생성
+  const kstTime = d.getTime() + (9 * 60 * 60 * 1000);
+  const kstDate = new Date(kstTime);
+  
+  // ISO 문자열에서 날짜 부분(YYYY-MM-DD)만 추출
+  // 주의: toISOString()은 항상 UTC 기준이므로, 위에서 9시간을 더한 시점이
+  // KST의 '현재 날짜'가 됩니다.
   return kstDate.toISOString().split('T')[0];
 }
 

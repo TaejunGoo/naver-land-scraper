@@ -1,8 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import ComplexList from './pages/ComplexList'
-import ComplexDetail from './pages/ComplexDetail'
 import { GlobalAlert } from './components/ui/GlobalAlert'
+import ComplexDetail from './pages/ComplexDetail'
 
 function App() {
   return (

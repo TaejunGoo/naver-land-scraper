@@ -151,12 +151,12 @@ export default function ComplexList() {
       queryClient.invalidateQueries({ queryKey: ["complexes"] });
       const data = response.data;
       showAlert(
-        "크롤링 완료",
-        `전체 크롤링이 완료되었습니다!\n${data.successComplexes}/${data.totalComplexes}개 단지, 총 ${data.totalListings}개 매물 수집`
+        "수집 완료",
+        `전체 데이터 수집이 완료되었습니다!\n${data.successComplexes}/${data.totalComplexes}개 단지, 총 ${data.totalListings}개 매물 수집`
       );
     },
     onError: () => {
-      showAlert("크롤링 실패", "전체 크롤링에 실패했습니다.");
+      showAlert("수집 실패", "전체 데이터 수집에 실패했습니다.");
     },
   });
 
@@ -338,8 +338,6 @@ export default function ComplexList() {
             key={complex.id}
             complex={complex}
             onEdit={handleEdit}
-            onDelete={() => handleDeleteComplex(complex)}
-            isDeleting={deleteMutation.isPending}
           />
         ))}
       </div>

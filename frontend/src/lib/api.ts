@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { Complex, Listing } from '../types'
 
 const api = axios.create({
   baseURL: '/api',
@@ -7,45 +8,7 @@ const api = axios.create({
   },
 })
 
-export interface Complex {
-  id: number
-  name: string
-  address: string
-  naverComplexId: string | null
-  customNotes: string | null
-  tags: string | null // JSON string
-  type: string | null
-  units: number | null
-  buildings: number | null
-  year: number | null
-  areaOptions: string | null
-  approvalDate: string | null
-  lastScrapedAt: string | null
-  infoScrapedAt: string | null
-  createdAt: string
-  updatedAt: string
-  todayListingCount?: number
-  todayListingCounts?: {
-    total: number
-    sale: number
-    jeonse: number
-    rent: number
-  }
-}
-
-export interface Listing {
-  id: number
-  complexId: number
-  price: number
-  area: number
-  supplyArea: number | null
-  floor: number
-  direction: string | null
-  tradetype: string
-  memo: string | null
-  url: string | null
-  scrapedAt: string
-}
+export type { Complex, Listing }
 
 export const complexApi = {
   getAll: () => api.get<Complex[]>('/complexes'),

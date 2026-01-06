@@ -1,382 +1,248 @@
-import puppeteer from 'puppeteer'
-import axios from 'axios'
+import puppeteer, { Browser } from 'puppeteer'
+import { ListingData, ComplexInfo } from '../types/index.js'
 
-interface ListingData {
-  price: number
-  area: number
-  supplyArea: number
-  floor: number
-  direction: string | null
-  tradetype: string
-  memo: string | null
-  url: string | null
+/**
+ * 지연 함수 (ms 단위)
+ */
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+/**
+ * Puppeteer 브라우저 공통 설정
+ */
+const LAUNCH_OPTIONS = {
+  headless: "new" as const,
+  args: [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-blink-features=AutomationControlled',
+    '--window-size=1920,1080',
+    '--disable-dev-shm-usage',
+    '--disable-gpu',
+    '--no-first-run',
+    '--no-zygote'
+  ],
+  ignoreDefaultArgs: ['--enable-automation']
 }
 
-interface ComplexInfo {
-  type?: string
-  units?: number
-  buildings?: number
-  year?: number
-  areaOptions?: string[]
-  approvalDate?: string
+/**
+ * 봇 감지 우회를 위한 페이지 초기화
+ */
+async function setupPage(page: any) {
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });
+    (window as any).chrome = { runtime: {} };
+    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+    Object.defineProperty(navigator, 'languages', { get: () => ['ko-KR', 'ko', 'en-US', 'en'] });
+  })
+
+  await page.setViewport({ width: 1920, height: 1080 })
+  await page.setUserAgent(
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+  )
+
+  await page.setExtraHTTPHeaders({
+    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'
+  })
+}
+
+/**
+ * 재시도 로직을 포함한 래퍼 함수
+ */
+async function withRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
+  let lastError: any
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn()
+    } catch (error) {
+      lastError = error
+      console.warn(`[Retry ${i + 1}/${retries}] 오류 발생: ${error instanceof Error ? error.message : error}`)
+      if (i < retries - 1) await delay(2000 * (i + 1))
+    }
+  }
+  throw lastError
 }
 
 /**
  * 네이버 부동산에서 단지 정보를 크롤링합니다.
- * @param naverComplexId - 네이버 부동산 단지 ID
- * @returns 단지 정보
  */
 export async function scrapeComplexInfo(naverComplexId: string): Promise<ComplexInfo> {
-  let browser
-  
-  try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox', 
-        '--disable-setuid-sandbox',
-        '--disable-blink-features=AutomationControlled',
-        '--window-size=1920,1080',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu'
-      ],
-      ignoreDefaultArgs: ['--enable-automation']
-    })
-    
-    const page = await browser.newPage()
-    
-    await page.evaluateOnNewDocument(() => {
-      (navigator as any).webdriver = false
-      ;(window as any).chrome = {
-        runtime: {}
-      }
-      const originalQuery = (window.navigator as any).permissions.query
-      ;(window.navigator as any).permissions.query = (parameters: any) => (
-        parameters.name === 'notifications' ?
-          Promise.resolve({ state: (Notification as any).permission } as PermissionStatus) :
-          originalQuery(parameters)
-      )
-    })
-    
-    await page.setViewport({ width: 1920, height: 1080 })
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-    )
-    
-    await page.setExtraHTTPHeaders({
-      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'Connection': 'keep-alive',
-    })
-    
-    const url = `https://new.land.naver.com/complexes/${naverComplexId}`
-    
-    console.log(`단지 정보 크롤링: ${url}`)
-    
-    await page.goto(url, { 
-      waitUntil: 'networkidle2',
-      timeout: 60000 
-    })
-    
-    await page.waitForTimeout(3000)
-    
-    // 단지 정보 추출
-    const complexInfo = await page.evaluate(() => {
-      const info: ComplexInfo = {}
+  return withRetry(async () => {
+    let browser: Browser | undefined
+    try {
+      browser = await puppeteer.launch(LAUNCH_OPTIONS)
+      const page = await browser.newPage()
+      await setupPage(page)
       
-      // 유형 추출
-      const typeEl = Array.from(document.querySelectorAll('.complex_feature dt')).find(el => el.textContent?.includes('유형'))
-      if (typeEl?.nextElementSibling) {
-        info.type = typeEl.nextElementSibling.textContent?.trim()
-      }
+      const url = `https://new.land.naver.com/complexes/${naverComplexId}`
+      console.log(`단지 정보 수집 시작: ${url}`)
       
-      // 세대수 추출
-      const unitsEl = Array.from(document.querySelectorAll('.complex_feature dt')).find(el => el.textContent?.includes('세대수'))
-      if (unitsEl?.nextElementSibling) {
-        const unitsText = unitsEl.nextElementSibling.textContent?.trim() || ''
-        const match = unitsText.match(/(\d+)/)
-        if (match) info.units = parseInt(match[1])
-      }
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 })
+      await delay(2000)
       
-      // 동수 추출
-      const buildingsEl = Array.from(document.querySelectorAll('.complex_feature dt')).find(el => el.textContent?.includes('동수'))
-      if (buildingsEl?.nextElementSibling) {
-        const buildingsText = buildingsEl.nextElementSibling.textContent?.trim() || ''
-        const match = buildingsText.match(/(\d+)/)
-        if (match) info.buildings = parseInt(match[1])
-      }
-      
-      // 연차 추출 (준공연도)
-      const yearEl = Array.from(document.querySelectorAll('.complex_feature dt')).find(el => el.textContent?.includes('준공연도'))
-      if (yearEl?.nextElementSibling) {
-        const yearText = yearEl.nextElementSibling.textContent?.trim() || ''
-        const match = yearText.match(/(\d{4})/)
-        if (match) info.year = parseInt(match[1])
-      }
-      
-      // 사용승인일 추출
-      const approvalEl = Array.from(document.querySelectorAll('.complex_feature dt')).find(el => el.textContent?.includes('사용승인일'))
-      if (approvalEl?.nextElementSibling) {
-        info.approvalDate = approvalEl.nextElementSibling.textContent?.trim()
-      }
-      
-      // 면적 옵션 추출 (필터에서)
-      const areaOptions: Set<string> = new Set()
-      const areaLabels = document.querySelectorAll('label[for^="housesize"]')
-      areaLabels.forEach(label => {
-        const text = label.textContent?.trim()
-        if (text && text !== '전체') {
-          areaOptions.add(text)
+      const complexInfo = await page.evaluate(() => {
+        const info: ComplexInfo = {}
+        const featureContainer = document.querySelector('.complex_feature')
+        if (!featureContainer) return info
+
+        const getVal = (label: string) => {
+          const dt = Array.from(featureContainer.querySelectorAll('dt')).find(el => el.textContent?.includes(label))
+          return dt?.nextElementSibling?.textContent?.trim() || ''
         }
+        
+        info.type = getVal('유형')
+        
+        const unitsText = getVal('세대수')
+        const unitsMatch = unitsText.match(/(\d+)/)
+        if (unitsMatch) info.units = parseInt(unitsMatch[1])
+        
+        const buildingsText = getVal('동수')
+        const buildingsMatch = buildingsText.match(/(\d+)/)
+        if (buildingsMatch) info.buildings = parseInt(buildingsMatch[1])
+        
+        const yearText = getVal('준공연도') || getVal('사용승인일')
+        const yearMatch = yearText.match(/(\d{4})/)
+        if (yearMatch) info.year = parseInt(yearMatch[1])
+        
+        info.approvalDate = getVal('사용승인일')
+        
+        const areaOptionsSet = new Set<string>()
+        document.querySelectorAll('label[for^="housesize"]').forEach(label => {
+          const text = label.textContent?.trim()
+          if (text && text !== '전체') areaOptionsSet.add(text)
+        })
+        if (areaOptionsSet.size > 0) info.areaOptions = Array.from(areaOptionsSet)
+        
+        return info
       })
       
-      if (areaOptions.size > 0) {
-        info.areaOptions = Array.from(areaOptions)
-      }
-      
-      return info
-    })
-    
-    console.log('단지 정보 추출 완료:', complexInfo)
-    
-    return complexInfo
-    
-  } catch (error) {
-    console.error('단지 정보 크롤링 오류:', error)
-    throw new Error('단지 정보 크롤링 실패')
-  } finally {
-    if (browser) {
-      await browser.close()
+      return complexInfo
+    } finally {
+      if (browser) await browser.close()
     }
-  }
+  })
 }
 
-
+/**
+ * 네이버 부동산에서 매물 목록을 크롤링합니다.
+ */
 export async function scrapeNaverListings(naverComplexId: string): Promise<ListingData[]> {
-  let browser
-  
-  try {
-    console.log(`매물 크롤링 시작 (Headless): 단지 ID ${naverComplexId}`)
-    
-    browser = await puppeteer.launch({
-      headless: "new", // 최신 Puppeteer의 감지 회피가 강화된 headless 모드
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-blink-features=AutomationControlled',
-        '--window-size=1920,1080',
-        '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        '--lang=ko-KR,ko'
-      ],
-      ignoreDefaultArgs: ['--enable-automation']
-    })
-    
-    const page = await browser.newPage()
-    
-    // 봇 감지 우회를 위한 고급 스크립트
-    await page.evaluateOnNewDocument(() => {
-      // webdriver 속성 제거
-      Object.defineProperty(navigator, 'webdriver', { get: () => false });
-      
-      // chrome 변수 위조
-      (window as any).chrome = { runtime: {} };
-      
-      // 플러그인 개수 위조 (봇은 보통 0개)
-      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-      
-      // 언어 설정 고정
-      Object.defineProperty(navigator, 'languages', { get: () => ['ko-KR', 'ko', 'en-US', 'en'] });
-    })
-
-    // 실제 브라우저처럼 보이게 하기 위한 추가 헤더
-    await page.setExtraHTTPHeaders({
-      'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-      'sec-ch-ua-mobile': '?0',
-      'sec-ch-ua-platform': '"Windows"',
-      'upgrade-insecure-requests': '1',
-      'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-      'accept-encoding': 'gzip, deflate, br',
-      'accept-language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
-    })
-
-    // (기존 리소스 차단 로직 유지)
-    await page.setRequestInterception(true)
-    page.on('request', (req) => {
-      if (['image', 'font', 'media'].includes(req.resourceType())) {
-        req.abort()
-      } else {
-        req.continue()
-      }
-    })
-
-    const url = `https://new.land.naver.com/complexes/${naverComplexId}`
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 })
-    
-    // (이후 수집 및 검증 로직 동일)
-    const allListings: ListingData[] = []
-    
-    // API 응답 가로채기
-    page.on('response', async (response) => {
-      const url = response.url()
-      
-      // 매물 API 응답만 처리
-      if (url.includes(`/api/articles/complex/${naverComplexId}`) && url.includes('type=list')) {
-        try {
-          const data = await response.json()
-          
-          if (data.articleList && Array.isArray(data.articleList)) {
-            console.log(`API 응답: ${data.articleList.length}개 매물 발견`)
-            
-            for (const article of data.articleList) {
-              try {
-                // 거래 유형 변환
-                let tradetype = '매매'
-                if (article.tradeTypeCode === 'B1') tradetype = '전세'
-                else if (article.tradeTypeCode === 'B2') tradetype = '월세'
-                else if (article.tradeTypeCode === 'A1') tradetype = '매매'
-                
-                // 가격 파싱 개선
-                let price = 0
-                const priceText = article.dealOrWarrantPrc || ''
-                
-                // "8억 1,000" 또는 "8억" 또는 "1,000" 형태
-                if (priceText.includes('억')) {
-                  const parts = priceText.split('억')
-                  const billionPart = parts[0].trim()
-                  const manPart = parts[1]?.trim() || ''
-                  
-                  // 억 단위
-                  if (billionPart) {
-                    price = parseInt(billionPart.replace(/,/g, '')) * 10000
-                  }
-                  
-                  // 만원 단위
-                  if (manPart) {
-                    price += parseInt(manPart.replace(/,/g, ''))
-                  }
-                } else {
-                  // 만원 단위만 있는 경우
-                  price = parseInt(priceText.replace(/,/g, ''))
-                }
-                
-                // 월세의 경우 rentPrc 사용
-                if (tradetype === '월세' && article.rentPrc) {
-                  price = parseInt(article.rentPrc.replace(/,/g, ''))
-                }
-                
-                const area = article.area2 || 0
-                const supplyArea = article.area1 || 0
-                
-                // 층 정보
-                let floor = 0
-                const floorInfo = article.floorInfo || ''
-                const floorMatch = floorInfo.match(/^(\d+)\//)
-                if (floorMatch) {
-                  floor = parseInt(floorMatch[1])
-                } else if (floorInfo.includes('중')) {
-                  floor = 6
-                } else if (floorInfo.includes('고')) {
-                  floor = 10
-                } else if (floorInfo.includes('저')) {
-                  floor = 3
-                }
-                
-                const direction = article.direction || null
-                
-                // 메모 (articleFeatureDesc)
-                const memo = article.articleFeatureDesc || null
-                
-                // 매물 링크
-                const articleUrl = null
-                
-                if (price > 0 && area > 0) {
-                  allListings.push({
-                    price,
-                    area,
-                    supplyArea,
-                    floor,
-                    direction,
-                    tradetype,
-                    memo,
-                    url: articleUrl
-                  })
-                }
-              } catch (error) {
-                console.error('매물 파싱 오류:', error)
-              }
-            }
-          }
-        } catch (error) {
-          // JSON 파싱 실패는 무시
-        }
-      }
-    })
-    
-    // 초기 로딩 대기
-    await page.waitForTimeout(3000)
-    
-    // 초기 수집된 데이터 클리어 (동일매물 묶기 전 데이터)
-    allListings.length = 0
-    
-    // '동일매물 묶기' 버튼 클릭
+  return withRetry(async () => {
+    let browser: Browser | undefined
     try {
-      console.log('동일매물 묶기 버튼 찾는 중...')
-      const groupButton = await page.$('#address_group2')
-      if (groupButton) {
-        const isChecked = await page.evaluate(() => {
-          const checkbox = document.querySelector('#address_group2') as HTMLInputElement
-          return checkbox?.checked || false
-        })
-        
-        if (!isChecked) {
-          console.log('동일매물 묶기 버튼 클릭')
-          await groupButton.click()
-          // 버튼 클릭 후 API 재호출 대기
-          await page.waitForTimeout(4000)
+      browser = await puppeteer.launch(LAUNCH_OPTIONS)
+      const page = await browser.newPage()
+      await setupPage(page)
+      
+      // 리소스 차단
+      await page.setRequestInterception(true)
+      page.on('request', (req) => {
+        if (['image', 'font', 'media'].includes(req.resourceType())) {
+          req.abort()
         } else {
-          console.log('동일매물 묶기가 이미 활성화되어 있습니다.')
-          await page.waitForTimeout(2000)
-        }
-      } else {
-        console.log('동일매물 묶기 버튼을 찾을 수 없습니다.')
-      }
-    } catch (error) {
-      console.log('동일매물 묶기 버튼 클릭 실패:', error)
-    }
-    
-    // 스크롤하여 더 많은 데이터 로드
-    console.log('스크롤하여 추가 매물 로드 중...')
-    for (let i = 0; i < 10; i++) {
-      await page.evaluate(() => {
-        const listContainer = document.querySelector('.item_list--article')
-        if (listContainer) {
-          listContainer.scrollTop = listContainer.scrollHeight
+          req.continue()
         }
       })
-      await page.waitForTimeout(1000)
+
+      const allListings: ListingData[] = []
+      
+      // API 응답 가로채기
+      page.on('response', async (response) => {
+        const url = response.url()
+        if (url.includes(`/api/articles/complex/${naverComplexId}`) && url.includes('type=list')) {
+          try {
+            const text = await response.text()
+            const data = JSON.parse(text)
+            if (data.articleList && Array.isArray(data.articleList)) {
+              console.log(`[Scraper] API 응답 수집: ${data.articleList.length}개 항목`)
+              for (const article of data.articleList) {
+                try {
+                  let tradetype = '매매'
+                  if (article.tradeTypeCode === 'B1') tradetype = '전세'
+                  else if (article.tradeTypeCode === 'B2') tradetype = '월세'
+                  
+                  let price = 0
+                  const priceText = article.dealOrWarrantPrc || ''
+                  if (priceText.includes('억')) {
+                    const parts = priceText.split('억')
+                    price = parseInt(parts[0].replace(/,/g, '')) * 10000
+                    if (parts[1]) price += parseInt(parts[1].replace(/,/g, '')) || 0
+                  } else {
+                    price = parseInt(priceText.replace(/,/g, '')) || 0
+                  }
+                  
+                  if (tradetype === '월세' && article.rentPrc) {
+                    price = parseInt(article.rentPrc.replace(/,/g, '')) || 0
+                  }
+                  
+                  const floorInfo = article.floorInfo || ''
+                  const floorMatch = floorInfo.match(/^(\d+)\//)
+                  let floor = floorMatch ? parseInt(floorMatch[1]) : (floorInfo.includes('고') ? 15 : floorInfo.includes('중') ? 8 : 3)
+
+                  allListings.push({
+                    price,
+                    area: article.area2 || 0,
+                    supplyArea: article.area1 || 0,
+                    floor,
+                    direction: article.direction || null,
+                    tradetype,
+                    memo: article.articleFeatureDesc || null,
+                    url: null
+                  })
+                } catch (e) { /* ignore single item parse error */ }
+              }
+            }
+          } catch (e) { /* ignore non-json or error */ }
+        }
+      })
+
+      const url = `https://new.land.naver.com/complexes/${naverComplexId}`
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      await delay(2000)
+
+      // 동일매물 묶기 활성화 (데이터 중복 제거를 위해 네이버 기능 활용)
+      try {
+        const groupBtn = await page.$('#address_group2')
+        if (groupBtn) {
+          const isChecked = await page.$eval('#address_group2', (el: any) => el.checked)
+          if (!isChecked) {
+            console.log(`[Scraper] 동일매물 묶기 활성화 중...`)
+            allListings.length = 0 // 클릭 전에 미리 비워서 새로 고침된 데이터만 받도록 함
+            await groupBtn.click()
+            await delay(2000)
+          }
+        }
+      } catch (e) { /* ignore button error */ }
+
+      // 스크롤하여 모든 매물 로드 (동적 감지)
+      console.log(`[Scraper] 데이터 로드를 위해 스크롤 다운 시작...`)
+      let lastCount = 0
+      let stableCount = 0
+
+      for (let i = 0; i < 15; i++) {
+        await page.evaluate(() => {
+          const container = document.querySelector('.item_list--article')
+          if (container) container.scrollTop = container.scrollHeight
+        })
+        await delay(800)
+
+        const currentCount = allListings.length
+        if (currentCount > 0 && currentCount === lastCount) {
+          stableCount++
+          if (stableCount >= 2) break // 2회 연속 변화 없으면 완료로 간주
+        } else {
+          stableCount = 0
+        }
+        lastCount = currentCount
+      }
+      
+      await delay(500)
+      console.log(`[Scraper] 수집 완료: 총 ${allListings.length}개 매물`)
+      
+      // 가격 순 정렬 등은 DB 저장 시가 아닌 수집된 raw 데이터 반환
+      return allListings
+    } finally {
+      if (browser) await browser.close().catch(() => {})
     }
-    
-    // 최종 대기
-    await page.waitForTimeout(2000)
-    
-    console.log(`총 ${allListings.length}개의 매물을 찾았습니다.`)
-    
-    if (allListings.length > 0) {
-      console.log('첫 번째 매물 샘플:', allListings[0])
-    }
-    
-    return allListings
-    
-  } catch (error) {
-    console.error('크롤링 오류:', error)
-    throw new Error('크롤링 실패')
-  } finally {
-    if (browser) {
-      await browser.close()
-    }
-  }
+  })
 }

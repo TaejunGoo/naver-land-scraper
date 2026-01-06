@@ -147,6 +147,10 @@ export function ListingChart({
       if (l.tradetype !== chartTradeType) return false;
       if (selectedAreas.size > 0 && !selectedAreas.has(String(l.area)))
         return false;
+      
+      const dateStr = formatDateKST(l.scrapedAt);
+      if (dateStr < chartStartDate || dateStr > chartEndDate) return false;
+      
       return true;
     });
 
@@ -154,15 +158,12 @@ export function ListingChart({
     const dateMap = new Map<string, { prices: number[] }>();
 
     filteredListings.forEach((listing) => {
-      const date = new Date(listing.scrapedAt);
-      if (date >= start && date <= end) {
-        const dateStr = formatDateKST(date);
-        if (!dateMap.has(dateStr)) {
-          dateMap.set(dateStr, { prices: [] });
-        }
-        const data = dateMap.get(dateStr)!;
-        data.prices.push(listing.price);
+      const dateStr = formatDateKST(listing.scrapedAt);
+      if (!dateMap.has(dateStr)) {
+        dateMap.set(dateStr, { prices: [] });
       }
+      const data = dateMap.get(dateStr)!;
+      data.prices.push(listing.price);
     });
 
     // 날짜 범위 내 모든 날짜 생성 (빈 날짜도 포함)

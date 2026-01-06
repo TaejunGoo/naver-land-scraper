@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Trash2, Pencil } from "lucide-react";
+import { ExternalLink, Pencil } from "lucide-react";
 import { Complex } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,15 +15,11 @@ import { getTagColor } from "@/lib/constants";
 interface ComplexCardProps {
   complex: Complex;
   onEdit: (complex: Complex) => void;
-  onDelete: (id: number) => void;
-  isDeleting: boolean;
 }
 
 export function ComplexCard({
   complex,
   onEdit,
-  onDelete,
-  isDeleting,
 }: ComplexCardProps) {
   // 사용승인일 기준 연차 계산
   let yearsSinceApproval = "-";
@@ -66,26 +62,30 @@ export function ComplexCard({
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
-      <CardHeader className="space-y-0 pb-3">
+      <CardHeader className="space-y-0 pb-2">
         <CardTitle className="flex items-start justify-between gap-2">
           <span className="flex-1 text-2xl">{complex.name}</span>
-          <div className="flex gap-1 flex-shrink-0">
+          <div className="flex flex-shrink-0">
+            {complex.naverComplexId && (
+              <a
+                href={`https://new.land.naver.com/complexes/${complex.naverComplexId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="네이버 부동산 이동"
+              >
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <ExternalLink className="w-4 h-4" />
+                </Button>
+              </a>
+            )}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => onEdit(complex)}
-              className="h-8 w-8"
+              className="h-6 w-6"
+              title="단지 정보 수정"
             >
               <Pencil className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onDelete(complex.id)}
-              disabled={isDeleting}
-              className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-            >
-              <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         </CardTitle>

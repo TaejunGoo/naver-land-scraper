@@ -41,12 +41,22 @@ router.post('/upload', upload.single('file'), (req, res) => {
     return res.status(400).json({ error: '업로드된 파일이 없습니다.' });
   }
 
+  const tempPath = req.file.path;
+
   try {
-    const tempPath = req.file.path;
+    // 1. SQLite 헤더 검증 (처음 16바이트가 "SQLite format 3\0")
+    const buffer = Buffer.alloc(16);
+    const fd = fs.openSync(tempPath, 'r');
+    fs.readSync(fd, buffer, 0, 16, 0);
+    fs.closeSync(fd);
+
+    const magic = buffer.toString('utf-8', 0, 15);
+    if (magic !== "SQLite format 3") {
+      fs.unlinkSync(tempPath);
+      return res.status(400).json({ error: '유효한 SQLite 데이터베이스 파일이 아닙니다.' });
+    }
     
-    // 기존 DB 파일에 덮어쓰기 위해 읽기 전용 스트림을 열어서 백업하거나 체크할 수 있지만
-    // 여기서는 단순하게 copyFileSync를 사용합니다.
-    // 주의: SQLite가 실행 중일 때 덮어쓰면 손상될 위험이 있으나, 로컬 1인용 앱에서는 대개 허용됩니다.
+    // 기존 DB 파일에 덮어쓰기
     fs.copyFileSync(tempPath, dbPath);
     
     // 임시 파일 삭제
@@ -57,6 +67,7 @@ router.post('/upload', upload.single('file'), (req, res) => {
       message: '데이터베이스가 성공적으로 복구되었습니다.' 
     });
   } catch (error) {
+    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
     console.error('DB 복구 오류:', error);
     res.status(500).json({ error: '데이터베이스 복구 중 오류가 발생했습니다.' });
   }
