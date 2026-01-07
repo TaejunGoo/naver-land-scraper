@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Complex, Listing } from "../types";
+import type { Complex, Listing, ComplexCreateInput, ComplexUpdateInput } from "../types";
 
 const api = axios.create({
   baseURL: "/api",
@@ -8,13 +8,13 @@ const api = axios.create({
   },
 });
 
-export type { Complex, Listing };
+export type { Complex, Listing, ComplexCreateInput, ComplexUpdateInput };
 
 export const complexApi = {
   getAll: () => api.get<Complex[]>("/complexes"),
   getById: (id: number) => api.get<Complex>(`/complexes/${id}`),
-  create: (data: Partial<Complex>) => api.post<Complex>("/complexes", data),
-  update: (id: number, data: Partial<Complex>) =>
+  create: (data: ComplexCreateInput) => api.post<Complex>("/complexes", data),
+  update: (id: number, data: ComplexUpdateInput) =>
     api.put<Complex>(`/complexes/${id}`, data),
   delete: (id: number) => api.delete(`/complexes/${id}`),
   scrape: (id: number) => api.post(`/complexes/${id}/scrape`),

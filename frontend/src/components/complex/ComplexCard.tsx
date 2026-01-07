@@ -1,3 +1,4 @@
+import { memo, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Pencil } from "lucide-react";
 import { Complex } from "@/lib/api";
@@ -17,48 +18,55 @@ interface ComplexCardProps {
   onEdit: (complex: Complex) => void;
 }
 
-export function ComplexCard({
+export const ComplexCard = memo(function ComplexCard({
   complex,
   onEdit,
 }: ComplexCardProps) {
-  // 사용승인일 기준 연차 계산
-  let yearsSinceApproval = "-";
-  if (complex.approvalDate) {
+  // 사용승인일 기준 연차 계산 (memoized)
+  const yearsSinceApproval = useMemo(() => {
+    if (!complex.approvalDate) return "-";
     try {
       const approvalYear = parseInt(complex.approvalDate.split(".")[0]);
       if (!isNaN(approvalYear)) {
         const currentYear = new Date().getFullYear();
         const years = currentYear - approvalYear;
-        yearsSinceApproval = `${years}년차`;
+        return `${years}년차`;
       }
-    } catch (e) {
+    } catch {
       // 파싱 실패 시 그냥 '-' 표시
     }
-  }
+    return "-";
+  }, [complex.approvalDate]);
 
-  // 태그 파싱 (배열/문자열 모두 안전하게 처리)
-  let tags: string[] = [];
-  try {
-    if (complex.tags) {
+  // 태그 파싱 (memoized)
+  const tags = useMemo(() => {
+    if (!complex.tags) return [];
+    try {
       const parsed = JSON.parse(complex.tags);
       if (Array.isArray(parsed)) {
-        tags = parsed;
+        return parsed;
       } else if (typeof parsed === "string") {
-        tags = parsed
+        return parsed
           .split(",")
           .map((t: string) => t.trim())
           .filter((t: string) => t);
       }
+    } catch {
+      // 파싱 실패 시 콤마로 분리 시도 (하위 호환성)
+      if (typeof complex.tags === "string") {
+        return complex.tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter((t) => t);
+      }
     }
-  } catch (e) {
-    // 파싱 실패 시 콤마로 분리 시도 (하위 호환성)
-    if (complex.tags && typeof complex.tags === "string") {
-      tags = complex.tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter((t) => t);
-    }
-  }
+    return [];
+  }, [complex.tags]);
+
+  // 편집 버튼 클릭 핸들러 (memoized)
+  const handleEditClick = useCallback(() => {
+    onEdit(complex);
+  }, [onEdit, complex]);
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -81,7 +89,7 @@ export function ComplexCard({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => onEdit(complex)}
+              onClick={handleEditClick}
               className="h-6 w-6"
               title="단지 정보 수정"
             >
@@ -168,4 +176,4 @@ export function ComplexCard({
       </CardContent>
     </Card>
   );
-}
+});

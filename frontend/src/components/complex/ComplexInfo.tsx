@@ -9,7 +9,7 @@ import {
   ExternalLink,
   Trash2,
 } from "lucide-react";
-import { complexApi, type Complex } from "@/lib/api";
+import { complexApi, type Complex, type ComplexUpdateInput } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { useAlertStore } from "@/lib/store";
 import {
@@ -77,7 +77,7 @@ export function ComplexInfo({
   }, [isEditing, complex]);
 
   const updateMutation = useMutation({
-    mutationFn: (data: Partial<Complex>) => complexApi.update(complex.id, data),
+    mutationFn: (data: ComplexUpdateInput) => complexApi.update(complex.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["complex", String(complex.id)],
@@ -119,8 +119,11 @@ export function ComplexInfo({
     const allTags = Array.from(new Set([...subwayLines, ...otherTagsList]));
 
     updateMutation.mutate({
-      ...formData,
-      tags: allTags as any,
+      name: formData.name,
+      address: formData.address,
+      naverComplexId: formData.naverComplexId,
+      customNotes: formData.customNotes,
+      tags: allTags,
     });
   };
 

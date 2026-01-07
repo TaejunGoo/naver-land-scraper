@@ -5,6 +5,14 @@ import {
   scrapeNaverListings,
   scrapeComplexInfo,
 } from "../scrapers/naverScraper.js";
+import {
+  getTodayKSTRange,
+  getYesterdayKSTRange,
+} from "../utils/index.js";
+import {
+  calculateListingCounts,
+  calculateListingStats,
+} from "../utils/index.js";
 
 const router = Router();
 
@@ -15,23 +23,9 @@ router.get("/", async (req, res) => {
       orderBy: { createdAt: "desc" },
     });
 
-    // 대한민국 표준시(KST) 기준 오늘 시작/종료 시점 계산
-    const now = new Date();
-    const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-    const todayKST = new Date(
-      Date.UTC(
-        kstNow.getUTCFullYear(),
-        kstNow.getUTCMonth(),
-        kstNow.getUTCDate()
-      )
-    );
-
-    // DB 쿼리를 위한 UTC 시간 (KST 00:00 = UTC 전날 15:00)
-    const startTime = new Date(todayKST.getTime() - 9 * 60 * 60 * 1000);
-    const endTime = new Date(startTime.getTime() + 24 * 60 * 60 * 1000);
-    // 어제 범위 (비교용)
-    const yesterdayStartTime = new Date(startTime.getTime() - 24 * 60 * 60 * 1000);
-    const yesterdayEndTime = startTime;
+    // Get KST date ranges using utility
+    const { startTime, endTime } = getTodayKSTRange();
+    const { startTime: yesterdayStartTime, endTime: yesterdayEndTime } = getYesterdayKSTRange();
 
     // 각 단지의 오늘 매물 수 계산 (유형별)
     const complexesWithCount = await Promise.all(
@@ -62,36 +56,14 @@ router.get("/", async (req, res) => {
           _count: true,
         });
 
-        const counts = {
-          total: 0, sale: 0, jeonse: 0, rent: 0,
-        };
-        const yesterdayCounts = {
-          total: 0, sale: 0, jeonse: 0, rent: 0,
-        };
-
-        todayCountsData.forEach((item: { tradetype: string; _count: number }) => {
-          const count = item._count;
-          counts.total += count;
-          if (item.tradetype === "매매") counts.sale = count;
-          else if (item.tradetype === "전세") counts.jeonse = count;
-          else if (item.tradetype === "월세") counts.rent = count;
-        });
-
-        yesterdayCountsData.forEach((item: { tradetype: string; _count: number }) => {
-           const count = item._count;
-           yesterdayCounts.total += count;
-           if (item.tradetype === "매매") yesterdayCounts.sale = count;
-           else if (item.tradetype === "전세") yesterdayCounts.jeonse = count;
-           else if (item.tradetype === "월세") yesterdayCounts.rent = count;
-        });
-
-        // 증감 계산
-        const diff = {
-           total: counts.total - yesterdayCounts.total,
-           sale: counts.sale - yesterdayCounts.sale,
-           jeonse: counts.jeonse - yesterdayCounts.jeonse,
-           rent: counts.rent - yesterdayCounts.rent
-        };
+        // Calculate stats using utility
+        const stats = calculateListingStats(
+          todayCountsData as Array<{ tradetype: string; _count: number }>,
+          yesterdayCountsData as Array<{ tradetype: string; _count: number }>
+        );
+        const counts = stats.today;
+        const yesterdayCounts = stats.yesterday;
+        const diff = stats.diff;
 
         // 데이터 수집 일수 계산 (KST 기준 중복 날짜 제외)
         const dateResult = await prisma.$queryRaw<any[]>`
@@ -292,20 +264,9 @@ router.get("/:id", async (req, res) => {
     `;
     const dataDaysCount = dateResult[0]?.data_count ? Number(dateResult[0].data_count) : 0;
 
-    // 통계 데이터 계산 (오늘/어제/증감)
-    const now = new Date();
-    const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-    const todayKST = new Date(
-      Date.UTC(
-        kstNow.getUTCFullYear(),
-        kstNow.getUTCMonth(),
-        kstNow.getUTCDate()
-      )
-    );
-    const startTime = new Date(todayKST.getTime() - 9 * 60 * 60 * 1000);
-    const endTime = new Date(startTime.getTime() + 24 * 60 * 60 * 1000);
-    const yesterdayStartTime = new Date(startTime.getTime() - 24 * 60 * 60 * 1000);
-    const yesterdayEndTime = startTime;
+    // Get KST date ranges using utility
+    const { startTime, endTime } = getTodayKSTRange();
+    const { startTime: yesterdayStartTime, endTime: yesterdayEndTime } = getYesterdayKSTRange();
 
     const todayCountsData = await prisma.listing.groupBy({
       by: ["tradetype"],
@@ -325,40 +286,18 @@ router.get("/:id", async (req, res) => {
       _count: true,
     });
 
-    const counts = { total: 0, sale: 0, jeonse: 0, rent: 0 };
-    const yesterdayCounts = { total: 0, sale: 0, jeonse: 0, rent: 0 };
-
-    todayCountsData.forEach((item: any) => {
-      counts.total += item._count;
-      if (item.tradetype === "매매") counts.sale = item._count;
-      else if (item.tradetype === "전세") counts.jeonse = item._count;
-      else if (item.tradetype === "월세") counts.rent = item._count;
-    });
-
-    yesterdayCountsData.forEach((item: any) => {
-      yesterdayCounts.total += item._count;
-      if (item.tradetype === "매매") yesterdayCounts.sale = item._count;
-      else if (item.tradetype === "전세") yesterdayCounts.jeonse = item._count;
-      else if (item.tradetype === "월세") yesterdayCounts.rent = item._count;
-    });
-
-    const diff = {
-      total: counts.total - yesterdayCounts.total,
-      sale: counts.sale - yesterdayCounts.sale,
-      jeonse: counts.jeonse - yesterdayCounts.jeonse,
-      rent: counts.rent - yesterdayCounts.rent,
-    };
+    // Calculate stats using utility
+    const listingStats = calculateListingStats(
+      todayCountsData as Array<{ tradetype: string; _count: number }>,
+      yesterdayCountsData as Array<{ tradetype: string; _count: number }>
+    );
 
     res.json({
       ...complex,
       dataDaysCount,
-      todayListingCount: counts.total,
-      todayListingCounts: counts,
-      listingStats: {
-        today: counts,
-        yesterday: yesterdayCounts,
-        diff: diff,
-      },
+      todayListingCount: listingStats.today.total,
+      todayListingCounts: listingStats.today,
+      listingStats,
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch complex" });
@@ -524,19 +463,8 @@ router.post("/:id/scrape", async (req, res) => {
         .json({ error: "Complex not found or missing Naver ID" });
     }
 
-    // 대한민국 표준시(KST) 기준 오늘 시작/종료 시점 계산
-    const now = new Date();
-    const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-    const todayKST = new Date(
-      Date.UTC(
-        kstNow.getUTCFullYear(),
-        kstNow.getUTCMonth(),
-        kstNow.getUTCDate()
-      )
-    );
-
-    const startTime = new Date(todayKST.getTime() - 9 * 60 * 60 * 1000);
-    const endTime = new Date(startTime.getTime() + 24 * 60 * 60 * 1000);
+    // Get KST date range using utility
+    const { startTime, endTime } = getTodayKSTRange();
 
     await prisma.listing.deleteMany({
       where: {
@@ -656,23 +584,12 @@ router.post("/scrape-all/listings", async (req, res) => {
       );
 
       const batchPromises = batch.map(async (complex) => {
-        const startTime = Date.now();
+        const scrapeStart = Date.now();
         try {
           console.log(`[시작] ${complex.name}`);
 
-          // 대한민국 표준시(KST) 기준 오늘 시작/종료 시점 계산
-          const now = new Date();
-          const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-          const todayKST = new Date(
-            Date.UTC(
-              kstNow.getUTCFullYear(),
-              kstNow.getUTCMonth(),
-              kstNow.getUTCDate()
-            )
-          );
-
-          const dbStartTime = new Date(todayKST.getTime() - 9 * 60 * 60 * 1000);
-          const endTime = new Date(dbStartTime.getTime() + 24 * 60 * 60 * 1000);
+          // Get KST date range using utility
+          const { startTime: dbStartTime, endTime } = getTodayKSTRange();
 
           await prisma.listing.deleteMany({
             where: {
@@ -704,7 +621,7 @@ router.post("/scrape-all/listings", async (req, res) => {
             data: { lastScrapedAt: new Date() },
           });
 
-          const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+          const duration = ((Date.now() - scrapeStart) / 1000).toFixed(1);
           console.log(
             `[완료] ${complex.name}: ${listings.length}개 저장 (${duration}초)`
           );

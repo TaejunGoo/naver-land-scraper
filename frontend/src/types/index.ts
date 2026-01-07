@@ -80,3 +80,14 @@ export interface ComplexInfo {
   areaOptions?: string[];
   approvalDate?: string;
 }
+
+// API request types (for create/update operations)
+export interface ComplexCreateInput {
+  name: string;
+  address: string;
+  naverComplexId?: string | null;
+  customNotes?: string | null;
+  tags?: string[];
+}
+
+export interface ComplexUpdateInput extends Partial<ComplexCreateInput> {}
