@@ -1,3 +1,4 @@
+import { useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ComplexListHeader } from "@/components/complex/ComplexListHeader";
 import { ComplexForm } from "@/components/complex/ComplexForm";
@@ -32,6 +33,14 @@ export default function ComplexList() {
     createTestComplexMutation,
   } = useComplexList();
 
+  const formRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (showForm && formRef.current) {
+      formRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [showForm, editingId]);
+
   if (isLoading) {
     return <div>로딩 중...</div>;
   }
@@ -58,19 +67,21 @@ export default function ComplexList() {
       />
 
       {showForm && (
-        <ComplexForm
-          editingId={editingId}
-          formData={formData}
-          setFormData={setFormData}
-          onSubmit={handleSubmit}
-          onCancel={resetForm}
-          onDelete={
-            editingId
-              ? () => handleDeleteComplex(complexes?.find((c) => c.id === editingId)!)
-              : undefined
-          }
-          isSubmitting={createMutation.isPending || updateMutation.isPending}
-        />
+        <div ref={formRef} className="scroll-mt-20">
+          <ComplexForm
+            editingId={editingId}
+            formData={formData}
+            setFormData={setFormData}
+            onSubmit={handleSubmit}
+            onCancel={resetForm}
+            onDelete={
+              editingId
+                ? () => handleDeleteComplex(complexes?.find((c) => c.id === editingId)!)
+                : undefined
+            }
+            isSubmitting={createMutation.isPending || updateMutation.isPending}
+          />
+        </div>
       )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

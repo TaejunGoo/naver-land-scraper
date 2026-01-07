@@ -58,6 +58,9 @@ export interface TrendData {
     priceChange: number;
     countChange: number;
     newCount: number; // 수정: newListingCount -> newCount
+    avgPrice84?: number;
+    newLowCount?: number;
+    newHighCount?: number;
   };
 }
 

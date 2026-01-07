@@ -40,9 +40,12 @@ export default function ComplexDetail() {
     currentListingCounts,
   } = useComplexDetail(id);
 
+  // 페이지 로드 시 스크롤 맨 위로
   useEffect(() => {
-    // 페이지 진입 시 스크롤 최상단으로 이동
     window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
 
     if (complex) {
       setHeader({

@@ -40,13 +40,21 @@ export function ComplexListHeader({
     <div className="flex flex-col gap-4">
       <div className="flex justify-between items-center flex-wrap gap-4">
         <h1 className="text-3xl font-bold">관심 아파트 단지</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link to="/trend">
             <Button variant="outline">
               <TrendingUp className="w-4 h-4 mr-2 text-emerald-500" />
               추세 분석
             </Button>
           </Link>
+          <Button
+            onClick={onExportExcelClick}
+            variant="outline"
+            disabled={!hasComplexes}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            엑셀 내보내기
+          </Button>
           <Button
             onClick={onCreateTestClick}
             disabled={isCreatingTest}
@@ -56,14 +64,6 @@ export function ComplexListHeader({
               className={`w-4 h-4 mr-2 ${isCreatingTest ? "animate-spin" : ""}`}
             />
             {isCreatingTest ? "생성 중..." : "테스트 단지 생성"}
-          </Button>
-          <Button
-            onClick={onExportExcelClick}
-            variant="outline"
-            disabled={!hasComplexes}
-          >
-            <Download className="w-4 h-4 mr-2" />
-            엑셀 내보내기
           </Button>
           <Button
             onClick={onScrapeAllClick}
@@ -82,7 +82,7 @@ export function ComplexListHeader({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
+      <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
         <span className="text-xs font-medium text-slate-500 ml-2">
           정렬 기준:
         </span>

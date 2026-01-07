@@ -127,6 +127,7 @@ export function useComplexList() {
     mutationFn: (id: number) => complexApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["complexes"] });
+      resetForm();
       showAlert("삭제 완료", "단지가 성공적으로 삭제되었습니다.");
     },
     onError: () => {
