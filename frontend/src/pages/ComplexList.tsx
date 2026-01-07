@@ -9,6 +9,7 @@ import { SUBWAY_LINES } from "@/lib/constants";
 import { ComplexListHeader } from "@/components/complex/ComplexListHeader";
 import { ComplexForm } from "@/components/complex/ComplexForm";
 import { ComplexCard } from "@/components/complex/ComplexCard";
+import { DashboardSummary } from "@/components/stats/DashboardSummary";
 import { Database, Download, Upload, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -313,6 +314,8 @@ export default function ComplexList() {
 
   return (
     <div className="space-y-6">
+      <DashboardSummary />
+      
       <ComplexListHeader
         onAddClick={() => {
           resetForm();

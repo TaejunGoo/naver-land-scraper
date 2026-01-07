@@ -124,21 +124,36 @@ export function ComplexCard({
           </div>
           <div className="py-2 text-xs">
             <div className="flex justify-between items-center mb-1">
-              <span className="text-muted-foreground">📊 현재 매물</span>
+              <span className="text-muted-foreground">📅 수집 일수</span>
+              <span className="font-bold text-sm text-emerald-600">
+                {complex.dataDaysCount || 0}일차
+              </span>
+            </div>
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-muted-foreground">📊 오늘 매물</span>
               <span className="font-bold text-sm text-blue-600">
                 {complex.todayListingCount || 0}개
               </span>
             </div>
             {complex.todayListingCounts && (
               <div className="flex gap-2 justify-end text-[11px] text-slate-500">
-                <span className="text-red-500">
+                <span className="flex items-center gap-0.5 text-red-500">
                   매매 {complex.todayListingCounts.sale}
+                  {complex.listingStats?.diff?.sale ? (
+                   <span className="text-[9px] opacity-80">{complex.listingStats.diff.sale > 0 ? "▲" : "▼"}{Math.abs(complex.listingStats.diff.sale)}</span>
+                  ) : null}
                 </span>
-                <span className="text-blue-500">
+                <span className="flex items-center gap-0.5 text-blue-500">
                   전세 {complex.todayListingCounts.jeonse}
+                  {complex.listingStats?.diff?.jeonse ? (
+                   <span className="text-[9px] opacity-80">{complex.listingStats.diff.jeonse > 0 ? "▲" : "▼"}{Math.abs(complex.listingStats.diff.jeonse)}</span>
+                  ) : null}
                 </span>
-                <span className="text-green-500">
+                <span className="flex items-center gap-0.5 text-green-500">
                   월세 {complex.todayListingCounts.rent}
+                  {complex.listingStats?.diff?.rent ? (
+                   <span className="text-[9px] opacity-80">{complex.listingStats.diff.rent > 0 ? "▲" : "▼"}{Math.abs(complex.listingStats.diff.rent)}</span>
+                  ) : null}
                 </span>
               </div>
             )}

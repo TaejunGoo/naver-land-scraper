@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url'
 import complexRoutes from './routes/complexRoutes.js'
 import listingRoutes from './routes/listingRoutes.js'
 import backupRoutes from './routes/backupRoutes.js'
+import statsRoutes from './routes/statsRoutes.js'
 import fs from 'fs'
 
 dotenv.config()
@@ -24,6 +25,7 @@ app.use(express.json())
 app.use('/api/complexes', complexRoutes)
 app.use('/api/listings', listingRoutes)
 app.use('/api/backups', backupRoutes)
+app.use('/api/stats', statsRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

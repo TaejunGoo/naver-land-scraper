@@ -180,7 +180,7 @@ router.post('/complex/:complexId/generate-dummy', async (req, res) => {
           price,
           area,
           supplyArea: area * 1.2,
-          floor,
+          floor: String(floor),
           direction,
           tradetype,
           memo: `테스트 매물 ${j + 1}`,

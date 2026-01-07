@@ -278,36 +278,56 @@ export function ComplexInfo({
             <div className="space-y-6">
               {/* 매물 현황 요약 */}
               <div className="grid grid-cols-4 gap-3">
-                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 text-center">
+                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 text-center relative group">
                   <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">
                     총 매물
                   </div>
-                  <div className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                  <div className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center justify-center gap-1">
                     {currentListingCounts?.total || 0}
+                    {complex.listingStats?.diff?.total ? (
+                      <span className={`text-xs ${complex.listingStats.diff.total > 0 ? "text-red-500" : "text-blue-500"}`}>
+                        {complex.listingStats.diff.total > 0 ? "▲" : "▼"}{Math.abs(complex.listingStats.diff.total)}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
-                <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-100 dark:border-red-900/30 text-center">
+                <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-100 dark:border-red-900/30 text-center relative group">
                   <div className="text-xs text-red-600 dark:text-red-400 mb-1">
                     매매
                   </div>
-                  <div className="text-xl font-bold text-red-700 dark:text-red-400">
+                  <div className="text-xl font-bold text-red-700 dark:text-red-400 flex items-center justify-center gap-1">
                     {currentListingCounts?.sale || 0}
+                     {complex.listingStats?.diff?.sale ? (
+                      <span className={`text-xs ${complex.listingStats.diff.sale > 0 ? "text-red-600" : "text-blue-600"}`}>
+                        {complex.listingStats.diff.sale > 0 ? "▲" : "▼"}{Math.abs(complex.listingStats.diff.sale)}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30 text-center">
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30 text-center relative group">
                   <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">
                     전세
                   </div>
-                  <div className="text-xl font-bold text-blue-700 dark:text-blue-400">
+                  <div className="text-xl font-bold text-blue-700 dark:text-blue-400 flex items-center justify-center gap-1">
                     {currentListingCounts?.jeonse || 0}
+                    {complex.listingStats?.diff?.jeonse ? (
+                      <span className={`text-xs ${complex.listingStats.diff.jeonse > 0 ? "text-red-500" : "text-blue-500"}`}>
+                        {complex.listingStats.diff.jeonse > 0 ? "▲" : "▼"}{Math.abs(complex.listingStats.diff.jeonse)}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
-                <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-xl border border-green-100 dark:border-green-900/30 text-center">
-                  <div className="text-xs text-green-600 dark:text-green-400 mb-1">
+                <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-xl border border-green-100 dark:border-green-900/30 text-center relative group">
+                   <div className="text-xs text-green-600 dark:text-green-400 mb-1">
                     월세
                   </div>
-                  <div className="text-xl font-bold text-green-700 dark:text-green-400">
+                  <div className="text-xl font-bold text-green-700 dark:text-green-400 flex items-center justify-center gap-1">
                     {currentListingCounts?.rent || 0}
+                    {complex.listingStats?.diff?.rent ? (
+                      <span className={`text-xs ${complex.listingStats.diff.rent > 0 ? "text-red-500" : "text-blue-500"}`}>
+                        {complex.listingStats.diff.rent > 0 ? "▲" : "▼"}{Math.abs(complex.listingStats.diff.rent)}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               </div>

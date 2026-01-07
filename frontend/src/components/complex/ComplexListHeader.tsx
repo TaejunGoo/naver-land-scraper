@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Beaker, RefreshCw, Plus, ArrowUpDown, Download } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Beaker, RefreshCw, Plus, ArrowUpDown, Download, TrendingUp } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -40,6 +41,12 @@ export function ComplexListHeader({
       <div className="flex justify-between items-center flex-wrap gap-4">
         <h1 className="text-3xl font-bold">관심 아파트 단지</h1>
         <div className="flex gap-2">
+          <Link to="/trend">
+            <Button variant="outline">
+              <TrendingUp className="w-4 h-4 mr-2 text-emerald-500" />
+              추세 분석
+            </Button>
+          </Link>
           <Button
             onClick={onCreateTestClick}
             disabled={isCreatingTest}

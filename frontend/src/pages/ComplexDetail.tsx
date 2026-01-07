@@ -41,6 +41,9 @@ export default function ComplexDetail() {
   } = useComplexDetail(id);
 
   useEffect(() => {
+    // 페이지 진입 시 스크롤 최상단으로 이동
+    window.scrollTo(0, 0);
+
     if (complex) {
       setHeader({
         title: (
@@ -60,11 +63,10 @@ export default function ComplexDetail() {
               to={`https://new.land.naver.com/complexes/${complex.naverComplexId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:inline-flex"
             >
               <Button variant="outline" size="sm" className="gap-1.5 h-9">
                 <ExternalLink className="w-3.5 h-3.5" />
-                네이버 부동산
+                <span className="hidden sm:inline">네이버 부동산</span>
               </Button>
             </Link>
             <Button
@@ -77,7 +79,7 @@ export default function ComplexDetail() {
               <Download
                 className={`w-3.5 h-3.5 ${isExporting ? "animate-pulse" : ""}`}
               />
-              엑셀 저장
+              <span className="hidden sm:inline">엑셀 저장</span>
             </Button>
             <Button
               variant="outline"
@@ -91,7 +93,7 @@ export default function ComplexDetail() {
                   isRefreshingInfo ? "animate-spin" : ""
                 }`}
               />
-              정보 갱신
+              <span className="hidden sm:inline">정보 갱신</span>
             </Button>
             <Button
               onClick={handleScrape}
@@ -102,7 +104,7 @@ export default function ComplexDetail() {
               <RefreshCw
                 className={`w-3.5 h-3.5 ${isScraping ? "animate-spin" : ""}`}
               />
-              매물 갱신
+              <span className="hidden sm:inline">매물 갱신</span>
             </Button>
           </div>
         ),

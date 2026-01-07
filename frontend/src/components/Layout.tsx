@@ -17,7 +17,7 @@ export default function Layout({ children }: LayoutProps) {
       <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md dark:bg-slate-900/80">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {showBackButton && (
+            {showBackButton ? (
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -26,13 +26,15 @@ export default function Layout({ children }: LayoutProps) {
               >
                 <ChevronLeft className="w-5 h-5" />
               </Button>
-            )}
-            <Link to="/" className="flex items-center gap-2.5 transition-colors hover:opacity-80">
-              <div className="bg-primary p-1.5 rounded-lg shadow-sm">
-                <Building2 className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold tracking-tight sr-only sm:not-sr-only">랜드브리핑</span>
-            </Link>
+              ) : (
+                <Link to="/" className="flex items-center gap-2.5 transition-colors hover:opacity-80">
+                <div className="bg-primary p-1.5 rounded-lg shadow-sm">
+                  <Building2 className="w-5 h-5 text-primary-foreground" />
+                </div>
+                <span className="text-xl font-bold tracking-tight sr-only sm:not-sr-only">랜드브리핑</span>
+              </Link>
+              )
+            }
 
             {title && (
               <>

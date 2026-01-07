@@ -21,6 +21,12 @@ export interface Complex {
     jeonse: number;
     rent: number;
   };
+  listingStats?: { // [추가]
+    today: { total: number; sale: number; jeonse: number; rent: number; };
+    yesterday: { total: number; sale: number; jeonse: number; rent: number; };
+    diff: { total: number; sale: number; jeonse: number; rent: number; };
+  };
+  dataDaysCount?: number;
 }
 
 export interface Listing {
@@ -35,6 +41,24 @@ export interface Listing {
   memo: string | null;
   url: string | null;
   scrapedAt: string;
+}
+
+export interface TrendData {
+  history: {
+    date: string;
+    totalCount: number;
+    saleCount: number;
+    jeonseCount: number;
+    rentCount: number;
+    avgPricePerPyeong: number; // m2 -> Pyeong
+  }[];
+  summary: {
+    todayTotal: number;
+    todayAvgPricePerPyeong: number; // m2 -> Pyeong
+    priceChange: number;
+    countChange: number;
+    newCount: number; // 수정: newListingCount -> newCount
+  };
 }
 
 export interface ListingData {

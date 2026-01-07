@@ -29,11 +29,15 @@ router.get("/", async (req, res) => {
     // DB 쿼리를 위한 UTC 시간 (KST 00:00 = UTC 전날 15:00)
     const startTime = new Date(todayKST.getTime() - 9 * 60 * 60 * 1000);
     const endTime = new Date(startTime.getTime() + 24 * 60 * 60 * 1000);
+    // 어제 범위 (비교용)
+    const yesterdayStartTime = new Date(startTime.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayEndTime = startTime;
 
     // 각 단지의 오늘 매물 수 계산 (유형별)
     const complexesWithCount = await Promise.all(
       complexes.map(async (complex: any) => {
-        const todayCounts = await prisma.listing.groupBy({
+        // [수정] 오늘 데이터 조회
+        const todayCountsData = await prisma.listing.groupBy({
           by: ["tradetype"],
           where: {
             complexId: complex.id,
@@ -45,14 +49,27 @@ router.get("/", async (req, res) => {
           _count: true,
         });
 
+        // [수정] 어제 데이터 조회 (증감 계산용)
+        const yesterdayCountsData = await prisma.listing.groupBy({
+          by: ["tradetype"],
+          where: {
+            complexId: complex.id,
+            scrapedAt: {
+              gte: yesterdayStartTime,
+              lt: yesterdayEndTime,
+            },
+          },
+          _count: true,
+        });
+
         const counts = {
-          total: 0,
-          sale: 0, // 매매
-          jeonse: 0, // 전세
-          rent: 0, // 월세
+          total: 0, sale: 0, jeonse: 0, rent: 0,
+        };
+        const yesterdayCounts = {
+          total: 0, sale: 0, jeonse: 0, rent: 0,
         };
 
-        todayCounts.forEach((item: { tradetype: string; _count: number }) => {
+        todayCountsData.forEach((item: { tradetype: string; _count: number }) => {
           const count = item._count;
           counts.total += count;
           if (item.tradetype === "매매") counts.sale = count;
@@ -60,10 +77,40 @@ router.get("/", async (req, res) => {
           else if (item.tradetype === "월세") counts.rent = count;
         });
 
+        yesterdayCountsData.forEach((item: { tradetype: string; _count: number }) => {
+           const count = item._count;
+           yesterdayCounts.total += count;
+           if (item.tradetype === "매매") yesterdayCounts.sale = count;
+           else if (item.tradetype === "전세") yesterdayCounts.jeonse = count;
+           else if (item.tradetype === "월세") yesterdayCounts.rent = count;
+        });
+
+        // 증감 계산
+        const diff = {
+           total: counts.total - yesterdayCounts.total,
+           sale: counts.sale - yesterdayCounts.sale,
+           jeonse: counts.jeonse - yesterdayCounts.jeonse,
+           rent: counts.rent - yesterdayCounts.rent
+        };
+
+        // 데이터 수집 일수 계산 (KST 기준 중복 날짜 제외)
+        const dateResult = await prisma.$queryRaw<any[]>`
+          SELECT COUNT(DISTINCT date(scrapedAt / 1000, 'unixepoch', '+9 hours')) as data_count 
+          FROM listings 
+          WHERE complexId = ${complex.id}
+        `;
+        const dataDaysCount = dateResult[0]?.data_count ? Number(dateResult[0].data_count) : 0;
+
         return {
           ...complex,
           todayListingCount: counts.total,
           todayListingCounts: counts,
+          listingStats: { // [추가] 통계 필드
+            today: counts,
+            yesterday: yesterdayCounts,
+            diff: diff
+          },
+          dataDaysCount,
         };
       })
     );
@@ -237,7 +284,82 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ error: "Complex not found" });
     }
 
-    res.json(complex);
+    // 데이터 수집 일수 추가 (KST 기준)
+    const dateResult = await prisma.$queryRaw<any[]>`
+      SELECT COUNT(DISTINCT date(scrapedAt / 1000, 'unixepoch', '+9 hours')) as data_count 
+      FROM listings 
+      WHERE complexId = ${Number(id)}
+    `;
+    const dataDaysCount = dateResult[0]?.data_count ? Number(dateResult[0].data_count) : 0;
+
+    // 통계 데이터 계산 (오늘/어제/증감)
+    const now = new Date();
+    const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const todayKST = new Date(
+      Date.UTC(
+        kstNow.getUTCFullYear(),
+        kstNow.getUTCMonth(),
+        kstNow.getUTCDate()
+      )
+    );
+    const startTime = new Date(todayKST.getTime() - 9 * 60 * 60 * 1000);
+    const endTime = new Date(startTime.getTime() + 24 * 60 * 60 * 1000);
+    const yesterdayStartTime = new Date(startTime.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayEndTime = startTime;
+
+    const todayCountsData = await prisma.listing.groupBy({
+      by: ["tradetype"],
+      where: {
+        complexId: Number(id),
+        scrapedAt: { gte: startTime, lt: endTime },
+      },
+      _count: true,
+    });
+
+    const yesterdayCountsData = await prisma.listing.groupBy({
+      by: ["tradetype"],
+      where: {
+        complexId: Number(id),
+        scrapedAt: { gte: yesterdayStartTime, lt: yesterdayEndTime },
+      },
+      _count: true,
+    });
+
+    const counts = { total: 0, sale: 0, jeonse: 0, rent: 0 };
+    const yesterdayCounts = { total: 0, sale: 0, jeonse: 0, rent: 0 };
+
+    todayCountsData.forEach((item: any) => {
+      counts.total += item._count;
+      if (item.tradetype === "매매") counts.sale = item._count;
+      else if (item.tradetype === "전세") counts.jeonse = item._count;
+      else if (item.tradetype === "월세") counts.rent = item._count;
+    });
+
+    yesterdayCountsData.forEach((item: any) => {
+      yesterdayCounts.total += item._count;
+      if (item.tradetype === "매매") yesterdayCounts.sale = item._count;
+      else if (item.tradetype === "전세") yesterdayCounts.jeonse = item._count;
+      else if (item.tradetype === "월세") yesterdayCounts.rent = item._count;
+    });
+
+    const diff = {
+      total: counts.total - yesterdayCounts.total,
+      sale: counts.sale - yesterdayCounts.sale,
+      jeonse: counts.jeonse - yesterdayCounts.jeonse,
+      rent: counts.rent - yesterdayCounts.rent,
+    };
+
+    res.json({
+      ...complex,
+      dataDaysCount,
+      todayListingCount: counts.total,
+      todayListingCounts: counts,
+      listingStats: {
+        today: counts,
+        yesterday: yesterdayCounts,
+        diff: diff,
+      },
+    });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch complex" });
   }
@@ -740,7 +862,7 @@ router.post("/create-test-complex", async (req, res) => {
           price,
           area,
           supplyArea: Math.round(area * 1.25),
-          floor,
+          floor: String(floor),
           direction,
           tradetype,
           memo: `테스트 매물 ${areaStr} ${tradetype}`,

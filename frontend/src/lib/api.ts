@@ -28,6 +28,10 @@ export const complexApi = {
     api.get(`/complexes/${id}/export/excel`, { responseType: "blob" }),
 };
 
+export const statsApi = {
+  getTrend: (days: number = 30) => api.get(`/stats/trend?days=${days}`),
+};
+
 export const listingApi = {
   getByComplexId: (
     complexId: number,

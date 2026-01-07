@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,26 +8,23 @@ datasource db {
 }
 
 model Complex {
-  id              Int       @id @default(autoincrement())
-  name            String
-  address         String
-  naverComplexId  String?
-  customNotes     String?
-  tags            String?   // JSON string: ["2호선 강남역", "GTX-A 성남역"]
-  
-  // 단지 정보
-  type            String?   // "아파트", "빌라" 등
-  units           Int?      // 세대수
-  buildings       Int?      // 동수
-  year            Int?      // 준공연도
-  areaOptions     String?   // JSON: 면적 옵션들 ["81㎡", "104A㎡", ...]
-  approvalDate    String?   // 사용승인일
-  
-  lastScrapedAt   DateTime?
-  infoScrapedAt   DateTime? // 단지 정보 크롤링 시각
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  listings        Listing[]
+  id             Int       @id @default(autoincrement())
+  name           String
+  address        String
+  naverComplexId String?
+  customNotes    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  lastScrapedAt  DateTime?
+  approvalDate   String?
+  areaOptions    String?
+  buildings      Int?
+  infoScrapedAt  DateTime?
+  type           String?
+  units          Int?
+  year           Int?
+  tags           String?
+  listings       Listing[]
 
   @@map("complexes")
 }
@@ -38,16 +32,16 @@ model Complex {
 model Listing {
   id         Int      @id @default(autoincrement())
   complexId  Int
-  complex    Complex  @relation(fields: [complexId], references: [id], onDelete: Cascade)
   price      Int
-  area       Float    // 전용면적
-  supplyArea Float?   // 계약면적 (공급면적)
+  area       Float
+  supplyArea Float?
   floor      String
   direction  String?
-  tradetype  String   // "매매", "전세", "월세"
-  memo       String?  // 매물 설명 (articleFeatureDesc)
-  url        String?  // 매물 링크
+  tradetype  String
+  memo       String?
+  url        String?
   scrapedAt  DateTime @default(now())
+  complex    Complex  @relation(fields: [complexId], references: [id], onDelete: Cascade)
 
   @@map("listings")
 }
