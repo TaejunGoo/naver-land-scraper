@@ -120,34 +120,39 @@ router.get("/trend", async (req, res) => {
     const newLists = Math.max(0, todayExistingCount - yesterdayTotalCount);
 
     // 4. 신고가/신저가 (New Highs/Lows) - 매매 기준, 최근 30일
-    // "오늘 등록된 매매 매물" 중, 같은 단지 & 같은 평형대(평 단위 반올림)에서
-    // 지난 30일(오늘 제외) 동안의 최저가보다 더 싸거나(신저가), 최고가보다 더 비싼(신고가) 건수
+    // "최근 수집일 매매 매물" 중, 같은 단지 & 같은 평형대(평 단위 반올림)에서
+    // 지난 30일(최근일 제외) 동안의 최저가보다 더 싸거나(신저가), 최고가보다 더 비싼(신고가) 건수
+    // Use latest scraped date instead of 'now' to handle historical data
     const recordsResult = await prisma.$queryRaw<any[]>`
-      WITH PastStats AS (
-        SELECT 
-          complexId, 
+      WITH LatestDate AS (
+        SELECT MAX(date(scrapedAt / 1000, 'unixepoch', '+9 hours')) as latestDate
+        FROM listings
+      ),
+      PastStats AS (
+        SELECT
+          complexId,
           CAST(area / 3.3058 AS INT) as pyung,
           MIN(price) as minPrice,
           MAX(price) as maxPrice
-        FROM listings
-        WHERE tradetype = '매매' 
-          AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') >= date('now', '+9 hours', '-30 days')
-          AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') < date('now', '+9 hours')
+        FROM listings, LatestDate
+        WHERE tradetype = '매매'
+          AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') >= date(LatestDate.latestDate, '-30 days')
+          AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') < LatestDate.latestDate
         GROUP BY complexId, CAST(area / 3.3058 AS INT)
       ),
-      TodayListings AS (
-        SELECT 
+      LatestListings AS (
+        SELECT
           complexId,
           CAST(area / 3.3058 AS INT) as pyung,
           price
-        FROM listings
+        FROM listings, LatestDate
         WHERE tradetype = '매매'
-          AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date('now', '+9 hours')
+          AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') = LatestDate.latestDate
       )
-      SELECT 
-        SUM(CASE WHEN t.price < p.minPrice THEN 1 ELSE 0 END) as lowCount,
-        SUM(CASE WHEN t.price > p.maxPrice THEN 1 ELSE 0 END) as highCount
-      FROM TodayListings t
+      SELECT
+        SUM(CASE WHEN t.price < CAST(p.minPrice AS INT) THEN 1 ELSE 0 END) as lowCount,
+        SUM(CASE WHEN t.price > CAST(p.maxPrice AS INT) THEN 1 ELSE 0 END) as highCount
+      FROM LatestListings t
       JOIN PastStats p ON t.complexId = p.complexId AND t.pyung = p.pyung
     `;
     
@@ -200,18 +205,22 @@ router.get("/records", async (req, res) => {
 
     if (isHigh) {
       records = await prisma.$queryRaw<any[]>`
-        WITH PastStats AS (
+        WITH LatestDate AS (
+          SELECT MAX(date(scrapedAt / 1000, 'unixepoch', '+9 hours')) as latestDate
+          FROM listings
+        ),
+        PastStats AS (
           SELECT
             complexId,
             CAST(area / 3.3058 AS INT) as pyung,
             MAX(price) as comparePrice
-          FROM listings
+          FROM listings, LatestDate
           WHERE tradetype = '매매'
-            AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') >= date('now', '+9 hours', '-30 days')
-            AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') < date('now', '+9 hours')
+            AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') >= date(LatestDate.latestDate, '-30 days')
+            AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') < LatestDate.latestDate
           GROUP BY complexId, CAST(area / 3.3058 AS INT)
         ),
-        TodayListings AS (
+        LatestListings AS (
           SELECT
             l.id,
             l.complexId,
@@ -227,31 +236,35 @@ router.get("/records", async (req, res) => {
             l.scrapedAt,
             CAST(l.area / 3.3058 AS INT) as pyung,
             CAST(l.price / (l.area / 3.3058) AS INT) as pricePerPyeong
-          FROM listings l
+          FROM listings l, LatestDate
           JOIN complexes c ON l.complexId = c.id
           WHERE l.tradetype = '매매'
-            AND date(l.scrapedAt / 1000, 'unixepoch', '+9 hours') = date('now', '+9 hours')
+            AND date(l.scrapedAt / 1000, 'unixepoch', '+9 hours') = LatestDate.latestDate
         )
         SELECT t.*
-        FROM TodayListings t
+        FROM LatestListings t
         JOIN PastStats p ON t.complexId = p.complexId AND t.pyung = p.pyung
-        WHERE t.price > p.comparePrice
+        WHERE t.price > CAST(p.comparePrice AS INT)
         ORDER BY t.price DESC
       `;
     } else {
       records = await prisma.$queryRaw<any[]>`
-        WITH PastStats AS (
+        WITH LatestDate AS (
+          SELECT MAX(date(scrapedAt / 1000, 'unixepoch', '+9 hours')) as latestDate
+          FROM listings
+        ),
+        PastStats AS (
           SELECT
             complexId,
             CAST(area / 3.3058 AS INT) as pyung,
             MIN(price) as comparePrice
-          FROM listings
+          FROM listings, LatestDate
           WHERE tradetype = '매매'
-            AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') >= date('now', '+9 hours', '-30 days')
-            AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') < date('now', '+9 hours')
+            AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') >= date(LatestDate.latestDate, '-30 days')
+            AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') < LatestDate.latestDate
           GROUP BY complexId, CAST(area / 3.3058 AS INT)
         ),
-        TodayListings AS (
+        LatestListings AS (
           SELECT
             l.id,
             l.complexId,
@@ -267,15 +280,15 @@ router.get("/records", async (req, res) => {
             l.scrapedAt,
             CAST(l.area / 3.3058 AS INT) as pyung,
             CAST(l.price / (l.area / 3.3058) AS INT) as pricePerPyeong
-          FROM listings l
+          FROM listings l, LatestDate
           JOIN complexes c ON l.complexId = c.id
           WHERE l.tradetype = '매매'
-            AND date(l.scrapedAt / 1000, 'unixepoch', '+9 hours') = date('now', '+9 hours')
+            AND date(l.scrapedAt / 1000, 'unixepoch', '+9 hours') = LatestDate.latestDate
         )
         SELECT t.*
-        FROM TodayListings t
+        FROM LatestListings t
         JOIN PastStats p ON t.complexId = p.complexId AND t.pyung = p.pyung
-        WHERE t.price < p.comparePrice
+        WHERE t.price < CAST(p.comparePrice AS INT)
         ORDER BY t.price ASC
       `;
     }

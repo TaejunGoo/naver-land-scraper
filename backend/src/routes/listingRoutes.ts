@@ -55,6 +55,7 @@ router.get('/:complexId', async (req, res) => {
     })
 
     // Get new high/low record IDs for this complex
+    // Use the latest scraped date instead of 'today' to handle historical data
     const recordIdsResult = await prisma.$queryRaw<any[]>`
       WITH PastStats AS (
         SELECT
@@ -64,27 +65,42 @@ router.get('/:complexId', async (req, res) => {
         FROM listings
         WHERE complexId = ${Number(complexId)}
           AND tradetype = '매매'
-          AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') >= date('now', '+9 hours', '-30 days')
-          AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') < date('now', '+9 hours')
+          AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') >= date((
+            SELECT MAX(date(scrapedAt / 1000, 'unixepoch', '+9 hours'))
+            FROM listings
+            WHERE complexId = ${Number(complexId)}
+          ), '-30 days')
+          AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') < (
+            SELECT MAX(date(scrapedAt / 1000, 'unixepoch', '+9 hours'))
+            FROM listings
+            WHERE complexId = ${Number(complexId)}
+          )
         GROUP BY CAST(area / 3.3058 AS INT)
       ),
-      TodayListings AS (
+      LatestListings AS (
         SELECT
-          id,
-          CAST(area / 3.3058 AS INT) as pyung,
-          price
-        FROM listings
-        WHERE complexId = ${Number(complexId)}
-          AND tradetype = '매매'
-          AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date('now', '+9 hours')
+          l.id,
+          CAST(l.area / 3.3058 AS INT) as pyung,
+          l.price
+        FROM listings l
+        WHERE l.complexId = ${Number(complexId)}
+          AND l.tradetype = '매매'
+          AND date(l.scrapedAt / 1000, 'unixepoch', '+9 hours') = (
+            SELECT MAX(date(scrapedAt / 1000, 'unixepoch', '+9 hours'))
+            FROM listings
+            WHERE complexId = ${Number(complexId)}
+          )
       )
       SELECT
         t.id,
-        CASE WHEN t.price < p.minPrice THEN 1 ELSE 0 END as isLow,
-        CASE WHEN t.price > p.maxPrice THEN 1 ELSE 0 END as isHigh
-      FROM TodayListings t
-      JOIN PastStats p ON t.pyung = p.pyung
-      WHERE t.price < p.minPrice OR t.price > p.maxPrice
+        t.pyung,
+        t.price,
+        p.minPrice,
+        p.maxPrice,
+        CASE WHEN t.price < CAST(p.minPrice AS INT) THEN 1 ELSE 0 END as isLow,
+        CASE WHEN t.price > CAST(p.maxPrice AS INT) THEN 1 ELSE 0 END as isHigh
+      FROM LatestListings t
+      LEFT JOIN PastStats p ON t.pyung = p.pyung
     `;
 
     // Create Sets for quick lookup
@@ -93,11 +109,15 @@ router.get('/:complexId', async (req, res) => {
 
     recordIdsResult.forEach(record => {
       const id = Number(record.id);
-      if (record.isHigh === 1) {
-        newHighIds.add(id);
-      }
-      if (record.isLow === 1) {
-        newLowIds.add(id);
+      // Only count if there's valid past data to compare against
+      if (record.minPrice !== null && record.maxPrice !== null) {
+        // Convert BigInt to Number for comparison
+        if (Number(record.isHigh) === 1) {
+          newHighIds.add(id);
+        }
+        if (Number(record.isLow) === 1) {
+          newLowIds.add(id);
+        }
       }
     });
 

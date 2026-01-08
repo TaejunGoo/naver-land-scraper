@@ -74,6 +74,7 @@ router.get("/", async (req, res) => {
         const dataDaysCount = dateResult[0]?.data_count ? Number(dateResult[0].data_count) : 0;
 
         // 신고가/신저가 개수 계산 (매매 기준, 최근 30일)
+        // Use latest scraped date instead of 'now' to handle historical data
         const recordsResult = await prisma.$queryRaw<any[]>`
           WITH PastStats AS (
             SELECT
@@ -83,23 +84,35 @@ router.get("/", async (req, res) => {
             FROM listings
             WHERE complexId = ${complex.id}
               AND tradetype = '매매'
-              AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') >= date('now', '+9 hours', '-30 days')
-              AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') < date('now', '+9 hours')
+              AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') >= date((
+                SELECT MAX(date(scrapedAt / 1000, 'unixepoch', '+9 hours'))
+                FROM listings
+                WHERE complexId = ${complex.id}
+              ), '-30 days')
+              AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') < (
+                SELECT MAX(date(scrapedAt / 1000, 'unixepoch', '+9 hours'))
+                FROM listings
+                WHERE complexId = ${complex.id}
+              )
             GROUP BY CAST(area / 3.3058 AS INT)
           ),
-          TodayListings AS (
+          LatestListings AS (
             SELECT
               CAST(area / 3.3058 AS INT) as pyung,
               price
             FROM listings
             WHERE complexId = ${complex.id}
               AND tradetype = '매매'
-              AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date('now', '+9 hours')
+              AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') = (
+                SELECT MAX(date(scrapedAt / 1000, 'unixepoch', '+9 hours'))
+                FROM listings
+                WHERE complexId = ${complex.id}
+              )
           )
           SELECT
-            SUM(CASE WHEN t.price < p.minPrice THEN 1 ELSE 0 END) as lowCount,
-            SUM(CASE WHEN t.price > p.maxPrice THEN 1 ELSE 0 END) as highCount
-          FROM TodayListings t
+            SUM(CASE WHEN t.price < CAST(p.minPrice AS INT) THEN 1 ELSE 0 END) as lowCount,
+            SUM(CASE WHEN t.price > CAST(p.maxPrice AS INT) THEN 1 ELSE 0 END) as highCount
+          FROM LatestListings t
           JOIN PastStats p ON t.pyung = p.pyung
         `;
 
