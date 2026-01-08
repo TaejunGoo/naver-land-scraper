@@ -144,7 +144,7 @@ export const ComplexCard = memo(function ComplexCard({
               </span>
             </div>
             {complex.todayListingCounts && (
-              <div className="flex gap-2 justify-end text-[11px] text-slate-500">
+              <div className="flex flex-wrap gap-x-2 gap-y-0.5 justify-end text-[11px] text-slate-500">
                 <span className="flex items-center gap-0.5 text-red-500">
                   매매 {complex.todayListingCounts.sale}
                   {complex.listingStats?.diff?.sale ? (
@@ -163,6 +163,16 @@ export const ComplexCard = memo(function ComplexCard({
                    <span className="text-[9px] opacity-80">{complex.listingStats.diff.rent > 0 ? "▲" : "▼"}{Math.abs(complex.listingStats.diff.rent)}</span>
                   ) : null}
                 </span>
+                {complex.recordCounts && complex.recordCounts.newHighCount > 0 && (
+                  <span className="flex items-center gap-0.5 text-red-600 dark:text-red-400 font-medium">
+                    ▲최고 {complex.recordCounts.newHighCount}
+                  </span>
+                )}
+                {complex.recordCounts && complex.recordCounts.newLowCount > 0 && (
+                  <span className="flex items-center gap-0.5 text-blue-600 dark:text-blue-400 font-medium">
+                    ▼최저 {complex.recordCounts.newLowCount}
+                  </span>
+                )}
               </div>
             )}
           </div>

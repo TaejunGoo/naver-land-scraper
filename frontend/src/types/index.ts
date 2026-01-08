@@ -27,6 +27,10 @@ export interface Complex {
     diff: { total: number; sale: number; jeonse: number; rent: number; };
   };
   dataDaysCount?: number;
+  recordCounts?: {
+    newHighCount: number;
+    newLowCount: number;
+  };
 }
 
 export interface Listing {
@@ -41,6 +45,8 @@ export interface Listing {
   memo: string | null;
   url: string | null;
   scrapedAt: string;
+  isNewHigh?: boolean;
+  isNewLow?: boolean;
 }
 
 export interface TrendData {
@@ -94,3 +100,20 @@ export interface ComplexCreateInput {
 }
 
 export interface ComplexUpdateInput extends Partial<ComplexCreateInput> {}
+
+export interface PriceRecord {
+  id: number;
+  complexId: number;
+  complexName: string;
+  tradetype: string;
+  price: number;
+  area: number;
+  supplyArea: number | null;
+  floor: string;
+  direction: string | null;
+  memo: string | null;
+  url: string | null;
+  scrapedAt: string;
+  pyeong: number;
+  pricePerPyeong: number;
+}

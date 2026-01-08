@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { statsApi } from "@/lib/api";
 import { TrendData } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  LineChart, 
-  ArrowUpRight, 
+import {
+  TrendingUp,
+  TrendingDown,
+  LineChart,
+  ArrowUpRight,
   ArrowDownRight
 } from "lucide-react";
 
@@ -32,7 +33,7 @@ export function DashboardSummary({ data: providedData }: { data?: TrendData | nu
   const { summary } = data;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       {/* 전일 대비 매물 증감 */}
       <Card className="bg-white/50 backdrop-blur-sm">
         <CardContent className="p-4 flex items-center justify-between">
@@ -81,31 +82,45 @@ export function DashboardSummary({ data: providedData }: { data?: TrendData | nu
         </CardContent>
       </Card>
 
-      {/* 신고가/신저가 (시장 흐름 대체) */}
-      <Card className="bg-white/50 backdrop-blur-sm">
-        <CardContent className="p-4 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-medium text-slate-500 mb-1">오늘의 가격 갱신</p>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 bg-red-50 px-2.5 py-1.5 rounded-md border border-red-100">
-                <span className="text-xs text-red-600 font-medium flex items-center gap-1">
-                  <ArrowUpRight className="w-3 h-3" /> 신고가
+      {/* 신고가 카드 */}
+      <Link to="/records?type=high" className="block">
+        <Card className="bg-white/50 backdrop-blur-sm hover:shadow-lg transition-shadow cursor-pointer">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-500 mb-1">신고가 매물</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-red-700">
+                  {summary.newHighCount || 0}
                 </span>
-                <span className="text-lg font-bold text-red-700 leading-none">{summary.newHighCount || 0}</span>
-              </div>
-              <div className="flex items-center gap-2 bg-blue-50 px-2.5 py-1.5 rounded-md border border-blue-100">
-                <span className="text-xs text-blue-600 font-medium flex items-center gap-1">
-                  <ArrowDownRight className="w-3 h-3" /> 신저가
-                </span>
-                <span className="text-lg font-bold text-blue-700 leading-none">{summary.newLowCount || 0}</span>
+                <span className="text-xs text-slate-400">건</span>
               </div>
             </div>
-          </div>
-          <div className="bg-yellow-50 p-2 rounded-lg">
-             <TrendingUp className="w-5 h-5 text-yellow-600" />
-          </div>
-        </CardContent>
-      </Card>
+            <div className="bg-red-50 p-2 rounded-lg">
+              <ArrowUpRight className="w-5 h-5 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
+
+      {/* 신저가 카드 */}
+      <Link to="/records?type=low" className="block">
+        <Card className="bg-white/50 backdrop-blur-sm hover:shadow-lg transition-shadow cursor-pointer">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-500 mb-1">신저가 매물</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-blue-700">
+                  {summary.newLowCount || 0}
+                </span>
+                <span className="text-xs text-slate-400">건</span>
+              </div>
+            </div>
+            <div className="bg-blue-50 p-2 rounded-lg">
+              <ArrowDownRight className="w-5 h-5 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
     </div>
   );
 }

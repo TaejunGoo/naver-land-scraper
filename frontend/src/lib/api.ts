@@ -30,6 +30,7 @@ export const complexApi = {
 
 export const statsApi = {
   getTrend: (days: number = 30) => api.get(`/stats/trend?days=${days}`),
+  getRecords: (type: 'high' | 'low') => api.get(`/stats/records?type=${type}`),
 };
 
 export const listingApi = {

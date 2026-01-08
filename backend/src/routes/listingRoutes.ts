@@ -54,7 +54,61 @@ router.get('/:complexId', async (req, res) => {
       orderBy: orderByClause
     })
 
-    res.json(listings)
+    // Get new high/low record IDs for this complex
+    const recordIdsResult = await prisma.$queryRaw<any[]>`
+      WITH PastStats AS (
+        SELECT
+          CAST(area / 3.3058 AS INT) as pyung,
+          MIN(price) as minPrice,
+          MAX(price) as maxPrice
+        FROM listings
+        WHERE complexId = ${Number(complexId)}
+          AND tradetype = '매매'
+          AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') >= date('now', '+9 hours', '-30 days')
+          AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') < date('now', '+9 hours')
+        GROUP BY CAST(area / 3.3058 AS INT)
+      ),
+      TodayListings AS (
+        SELECT
+          id,
+          CAST(area / 3.3058 AS INT) as pyung,
+          price
+        FROM listings
+        WHERE complexId = ${Number(complexId)}
+          AND tradetype = '매매'
+          AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date('now', '+9 hours')
+      )
+      SELECT
+        t.id,
+        CASE WHEN t.price < p.minPrice THEN 1 ELSE 0 END as isLow,
+        CASE WHEN t.price > p.maxPrice THEN 1 ELSE 0 END as isHigh
+      FROM TodayListings t
+      JOIN PastStats p ON t.pyung = p.pyung
+      WHERE t.price < p.minPrice OR t.price > p.maxPrice
+    `;
+
+    // Create Sets for quick lookup
+    const newHighIds = new Set<number>();
+    const newLowIds = new Set<number>();
+
+    recordIdsResult.forEach(record => {
+      const id = Number(record.id);
+      if (record.isHigh === 1) {
+        newHighIds.add(id);
+      }
+      if (record.isLow === 1) {
+        newLowIds.add(id);
+      }
+    });
+
+    // Add flags to listings
+    const listingsWithFlags = listings.map(listing => ({
+      ...listing,
+      isNewHigh: newHighIds.has(listing.id),
+      isNewLow: newLowIds.has(listing.id),
+    }));
+
+    res.json(listingsWithFlags)
   } catch (error) {
     console.error('Error fetching listings:', error)
     res.status(500).json({ error: 'Failed to fetch listings' })

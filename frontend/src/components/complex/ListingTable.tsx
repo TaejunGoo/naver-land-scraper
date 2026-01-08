@@ -195,7 +195,13 @@ export function ListingTable({
           </TableHeader>
           <TableBody>
             {(showAll ? listings : listings.slice(0, displayCount)).map((listing) => (
-              <TableRow key={listing.id} className="group hover:bg-muted/30 transition-colors">
+              <TableRow
+                key={listing.id}
+                className={`group hover:bg-muted/30 transition-colors ${
+                  listing.isNewHigh ? "bg-red-50 dark:bg-red-900/20" :
+                  listing.isNewLow ? "bg-blue-50 dark:bg-blue-900/20" : ""
+                }`}
+              >
                 <TableCell className="text-center">
                   <Checkbox 
                     checked={selectedListings.has(listing.id)}

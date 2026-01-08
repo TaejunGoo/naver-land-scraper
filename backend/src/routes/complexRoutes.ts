@@ -67,11 +67,44 @@ router.get("/", async (req, res) => {
 
         // 데이터 수집 일수 계산 (KST 기준 중복 날짜 제외)
         const dateResult = await prisma.$queryRaw<any[]>`
-          SELECT COUNT(DISTINCT date(scrapedAt / 1000, 'unixepoch', '+9 hours')) as data_count 
-          FROM listings 
+          SELECT COUNT(DISTINCT date(scrapedAt / 1000, 'unixepoch', '+9 hours')) as data_count
+          FROM listings
           WHERE complexId = ${complex.id}
         `;
         const dataDaysCount = dateResult[0]?.data_count ? Number(dateResult[0].data_count) : 0;
+
+        // 신고가/신저가 개수 계산 (매매 기준, 최근 30일)
+        const recordsResult = await prisma.$queryRaw<any[]>`
+          WITH PastStats AS (
+            SELECT
+              CAST(area / 3.3058 AS INT) as pyung,
+              MIN(price) as minPrice,
+              MAX(price) as maxPrice
+            FROM listings
+            WHERE complexId = ${complex.id}
+              AND tradetype = '매매'
+              AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') >= date('now', '+9 hours', '-30 days')
+              AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') < date('now', '+9 hours')
+            GROUP BY CAST(area / 3.3058 AS INT)
+          ),
+          TodayListings AS (
+            SELECT
+              CAST(area / 3.3058 AS INT) as pyung,
+              price
+            FROM listings
+            WHERE complexId = ${complex.id}
+              AND tradetype = '매매'
+              AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date('now', '+9 hours')
+          )
+          SELECT
+            SUM(CASE WHEN t.price < p.minPrice THEN 1 ELSE 0 END) as lowCount,
+            SUM(CASE WHEN t.price > p.maxPrice THEN 1 ELSE 0 END) as highCount
+          FROM TodayListings t
+          JOIN PastStats p ON t.pyung = p.pyung
+        `;
+
+        const newLowCount = Number(recordsResult[0]?.lowCount || 0);
+        const newHighCount = Number(recordsResult[0]?.highCount || 0);
 
         return {
           ...complex,
@@ -83,6 +116,10 @@ router.get("/", async (req, res) => {
             diff: diff
           },
           dataDaysCount,
+          recordCounts: {
+            newHighCount,
+            newLowCount,
+          },
         };
       })
     );

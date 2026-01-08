@@ -183,4 +183,126 @@ router.get("/trend", async (req, res) => {
   }
 });
 
+// Get new high/low price records (individual listings)
+router.get("/records", async (req, res) => {
+  try {
+    const { type } = req.query;
+
+    if (!type || (type !== 'high' && type !== 'low')) {
+      return res.status(400).json({ error: "Invalid type parameter. Must be 'high' or 'low'." });
+    }
+
+    const isHigh = type === 'high';
+
+    // Query to get individual listings that are new highs or lows
+    // Split into two separate queries to avoid Prisma template literal issues
+    let records;
+
+    if (isHigh) {
+      records = await prisma.$queryRaw<any[]>`
+        WITH PastStats AS (
+          SELECT
+            complexId,
+            CAST(area / 3.3058 AS INT) as pyung,
+            MAX(price) as comparePrice
+          FROM listings
+          WHERE tradetype = '매매'
+            AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') >= date('now', '+9 hours', '-30 days')
+            AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') < date('now', '+9 hours')
+          GROUP BY complexId, CAST(area / 3.3058 AS INT)
+        ),
+        TodayListings AS (
+          SELECT
+            l.id,
+            l.complexId,
+            c.name as complexName,
+            l.tradetype,
+            l.price,
+            l.area,
+            l.supplyArea,
+            l.floor,
+            l.direction,
+            l.memo,
+            l.url,
+            l.scrapedAt,
+            CAST(l.area / 3.3058 AS INT) as pyung,
+            CAST(l.price / (l.area / 3.3058) AS INT) as pricePerPyeong
+          FROM listings l
+          JOIN complexes c ON l.complexId = c.id
+          WHERE l.tradetype = '매매'
+            AND date(l.scrapedAt / 1000, 'unixepoch', '+9 hours') = date('now', '+9 hours')
+        )
+        SELECT t.*
+        FROM TodayListings t
+        JOIN PastStats p ON t.complexId = p.complexId AND t.pyung = p.pyung
+        WHERE t.price > p.comparePrice
+        ORDER BY t.price DESC
+      `;
+    } else {
+      records = await prisma.$queryRaw<any[]>`
+        WITH PastStats AS (
+          SELECT
+            complexId,
+            CAST(area / 3.3058 AS INT) as pyung,
+            MIN(price) as comparePrice
+          FROM listings
+          WHERE tradetype = '매매'
+            AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') >= date('now', '+9 hours', '-30 days')
+            AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') < date('now', '+9 hours')
+          GROUP BY complexId, CAST(area / 3.3058 AS INT)
+        ),
+        TodayListings AS (
+          SELECT
+            l.id,
+            l.complexId,
+            c.name as complexName,
+            l.tradetype,
+            l.price,
+            l.area,
+            l.supplyArea,
+            l.floor,
+            l.direction,
+            l.memo,
+            l.url,
+            l.scrapedAt,
+            CAST(l.area / 3.3058 AS INT) as pyung,
+            CAST(l.price / (l.area / 3.3058) AS INT) as pricePerPyeong
+          FROM listings l
+          JOIN complexes c ON l.complexId = c.id
+          WHERE l.tradetype = '매매'
+            AND date(l.scrapedAt / 1000, 'unixepoch', '+9 hours') = date('now', '+9 hours')
+        )
+        SELECT t.*
+        FROM TodayListings t
+        JOIN PastStats p ON t.complexId = p.complexId AND t.pyung = p.pyung
+        WHERE t.price < p.comparePrice
+        ORDER BY t.price ASC
+      `;
+    }
+
+    // Convert BigInt to Number for JSON serialization
+    const formattedRecords = records.map(r => ({
+      id: Number(r.id),
+      complexId: Number(r.complexId),
+      complexName: r.complexName,
+      tradetype: r.tradetype,
+      price: Number(r.price),
+      area: Number(r.area),
+      supplyArea: r.supplyArea ? Number(r.supplyArea) : null,
+      floor: r.floor,
+      direction: r.direction,
+      memo: r.memo,
+      url: r.url,
+      scrapedAt: r.scrapedAt,
+      pyeong: Number(r.pyung),
+      pricePerPyeong: Number(r.pricePerPyeong),
+    }));
+
+    res.json({ records: formattedRecords });
+  } catch (error) {
+    console.error("Records fetch error:", error);
+    res.status(500).json({ error: "Failed to fetch price records" });
+  }
+});
+
 export default router;
