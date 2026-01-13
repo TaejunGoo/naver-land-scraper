@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { statsApi } from "@/lib/api";
-import { TrendData } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   TrendingUp,
@@ -11,24 +10,16 @@ import {
   ArrowDownRight
 } from "lucide-react";
 
-export function DashboardSummary({ data: providedData }: { data?: TrendData | null }) {
-  const [data, setData] = useState<TrendData | null>(providedData || null);
-  const [loading, setLoading] = useState(!providedData);
+export function DashboardSummary() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["stats", "trend"],
+    queryFn: async () => {
+      const response = await statsApi.getTrend();
+      return response.data;
+    },
+  });
 
-  useEffect(() => {
-    if (providedData) {
-      setData(providedData);
-      setLoading(false);
-      return;
-    }
-
-    statsApi.getTrend()
-      .then(res => setData(res.data))
-      .catch(err => console.error("Trend load error", err))
-      .finally(() => setLoading(false));
-  }, [providedData]);
-
-  if (loading || !data) return null;
+  if (isLoading || !data) return null;
 
   const { summary } = data;
 

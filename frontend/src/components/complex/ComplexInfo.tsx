@@ -293,6 +293,9 @@ export function ComplexInfo({
                       </span>
                     ) : null}
                   </div>
+                  {complex.listingStats?.diff?.total !== undefined && complex.listingStats.diff.total !== 0 && (
+                    <div className="text-[10px] text-slate-400 mt-0.5">직전일 대비</div>
+                  )}
                 </div>
                 <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-100 dark:border-red-900/30 text-center relative group">
                   <div className="text-xs text-red-600 dark:text-red-400 mb-1">

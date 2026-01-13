@@ -70,7 +70,7 @@ export default function Trend() {
       ) : (
         <>
           {/* 요약 대시보드 */}
-          <DashboardSummary data={data} />
+          <DashboardSummary />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 평단가 추이 차트 */}

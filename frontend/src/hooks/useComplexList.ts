@@ -140,6 +140,7 @@ export function useComplexList() {
     mutationFn: () => complexApi.scrapeAll(),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["complexes"] });
+      queryClient.invalidateQueries({ queryKey: ["stats", "trend"] });
       const data = response.data;
       showAlert(
         "수집 완료",

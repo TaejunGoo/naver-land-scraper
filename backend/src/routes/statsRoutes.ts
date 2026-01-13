@@ -8,7 +8,40 @@ router.get("/trend", async (req, res) => {
   try {
     const days = Number(req.query.days) || 30; // Default to 30 days
     
-    // 기간별 데이터 조회 (KST 기준)
+    // 1. 먼저 최근 수집일(latestDate)을 확인하기 위해 Summary 쿼리를 가장 먼저 실행합니다.
+    const summary = await prisma.$queryRaw<any[]>`
+      WITH DailyStats AS (
+        SELECT 
+          date(scrapedAt / 1000, 'unixepoch', '+9 hours') as date,
+          COUNT(*) as totalCount,
+          AVG(price / area) * 3.305785 as avgPricePerPyeong
+        FROM listings
+        GROUP BY date
+      )
+      SELECT * FROM DailyStats ORDER BY date DESC LIMIT 2
+    `;
+
+    // 데이터가 없는 경우 빈 값 반환
+    if (!summary || summary.length === 0) {
+      return res.json({
+        history: [],
+        summary: {
+          todayTotal: 0,
+          todayAvgPricePerPyeong: 0,
+          priceChange: 0,
+          countChange: 0,
+          newCount: 0,
+          avgPrice84: 0,
+          newLowCount: 0,
+          newHighCount: 0
+        }
+      });
+    }
+
+    // 가장 최근 수집된 날짜
+    const latestDate = summary[0].date;
+
+    // 2. 기간별 데이터 조회 (KST 기준)
     const trendData = await prisma.$queryRaw<any[]>`
       SELECT 
         date(scrapedAt / 1000, 'unixepoch', '+9 hours') as date,
@@ -23,24 +56,19 @@ router.get("/trend", async (req, res) => {
       LIMIT ${days}
     `;
 
-    // 오늘과 어제의 데이터 비교를 위한 요약 정보 (전체 시장 요약)
-    // 수정: 평단가 단순 평균이 아닌, "단지별 변동률의 평균" (Weekly Trend) 및 "국평(84㎡) 평균가" 알고리즘 적용
-
-    // 1. 단지별 변동률 (Weekly Trend: 7일 전 대비)
-    // 단지별로 (오늘평단가 - 7일전평단가) / 7일전평단가 를 구한 뒤, 이를 전체 단지에 대해 평균냄.
-    // 매매(tradetype = '매매') 기준.
+    // 3. 단지별 변동률 (Weekly Trend: 7일 전 대비) - latestDate 기준
     const weeklyTrendResult = await prisma.$queryRaw<any[]>`
       WITH TodayComplex AS (
         SELECT complexId, AVG(CAST(price AS FLOAT) / CAST(area AS FLOAT)) as avgPrice
         FROM listings
-        WHERE date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date('now', '+9 hours')
+        WHERE date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date(${latestDate})
         AND tradetype = '매매'
         GROUP BY complexId
       ),
       LastWeekComplex AS (
         SELECT complexId, AVG(CAST(price AS FLOAT) / CAST(area AS FLOAT)) as avgPrice
         FROM listings
-        WHERE date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date('now', '+9 hours', '-7 days')
+        WHERE date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date(${latestDate}, '-7 days')
         AND tradetype = '매매'
         GROUP BY complexId
       )
@@ -53,37 +81,18 @@ router.get("/trend", async (req, res) => {
       ? Number(weeklyTrendResult[0].avgChangeRate) 
       : 0;
 
-    // 2. 국평(84㎡) 평균가 (전용 84~85㎡ 사이 매물의 평균 가격)
+    // 4. 국평(84㎡) 평균가 - latestDate 기준
     const standard84Result = await prisma.$queryRaw<any[]>`
       SELECT AVG(CAST(price AS FLOAT)) as avgPrice
       FROM listings
-      WHERE date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date('now', '+9 hours')
+      WHERE date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date(${latestDate})
       AND tradetype = '매매'
       AND area >= 84 AND area < 85
     `;
     const standard84Price = Number(standard84Result[0]?.avgPrice || 0);
 
-    // 3. 기본 통계 (총 매물 수 등) - 기존 로직 유지하되, 전체 평단가는 참고용으로 둠
-    const summary = await prisma.$queryRaw<any[]>`
-      WITH DailyStats AS (
-        SELECT 
-          date(scrapedAt / 1000, 'unixepoch', '+9 hours') as date,
-          COUNT(*) as totalCount,
-          AVG(price / area) * 3.305785 as avgPricePerPyeong
-        FROM listings
-        GROUP BY date
-      )
-      SELECT * FROM DailyStats ORDER BY date DESC LIMIT 2
-    `;
-
-    // 신규 매물 (어제 데이터 집합에 없고 오늘 데이터 집합에 있는 url/id)
-    // SQL로 복잡하게 짜기보다는, 오늘과 어제의 매물 ID 리스트를 가져와서 JS로 계산하는 것이 빠름
-    // 단, 여기서는 대시보드 성능을 위해 단순 카운트 비교로 대체하거나, 별도 쿼리로 분리
-    
-    // [단순화된 신규 매물 로직]
-    // "어제에 비해 매물 수가 얼마나 늘었는지"를 표시 (단, 오늘 처음 수집된 단지는 제외)
-    // 1. 오늘 수집된 전체 매물 중, 수집 이력이 어제 이전인 단지의 매물 수만 집계 (Today Existing Count)
-    // 2. (Today Existing Count) - (Yesterday Total Count) 가 양수면 그 차이를 신규 유입으로 간주
+    // 5. 신규 매물 (어제/직전 수집일에 비해 매물 수가 얼마나 늘었는지)
+    // latestDate 기준
     const todayExistingResult = await prisma.$queryRaw<any[]>`
       SELECT COUNT(*) as count
       FROM listings as l1
@@ -91,38 +100,29 @@ router.get("/trend", async (req, res) => {
           SELECT complexId 
           FROM listings 
           GROUP BY complexId 
-          HAVING MIN(date(scrapedAt / 1000, 'unixepoch', '+9 hours')) < date('now', '+9 hours')
+          HAVING MIN(date(scrapedAt / 1000, 'unixepoch', '+9 hours')) < date(${latestDate})
       ) as c ON l1.complexId = c.complexId
-      WHERE date(l1.scrapedAt / 1000, 'unixepoch', '+9 hours') = date('now', '+9 hours')
+      WHERE date(l1.scrapedAt / 1000, 'unixepoch', '+9 hours') = date(${latestDate})
     `;
     
     const todayExistingCount = Number(todayExistingResult[0]?.count || 0);
     
-    // summary 배열의 원소들도 BigInt를 포함하고 있으므로, 사용 전 Number로 변환합니다.
+    // summary 데이터 (이미 위에서 가져옴)
     const rawYesterday = summary[1] || { totalCount: 0, avgPricePerPyeong: 0 };
-    const rawToday = summary[0] || { totalCount: 0, avgPricePerPyeong: 0 };
+    const rawToday = summary[0]; // 반드시 존재함 (length check 통과)
 
     const yesterdayTotalCount = Number(rawYesterday.totalCount || 0);
     const todayTotalCount = Number(rawToday.totalCount || 0);
     const yesterdayAvgPrice = Number(rawYesterday.avgPricePerPyeong || 0);
     const todayAvgPrice = Number(rawToday.avgPricePerPyeong || 0);
 
-    // 기존 priceChange 로직을 weeklyTrendRate로 대체 (혹은 별도 필드로 전달)
-    // 여기서는 기존 'priceChange' 필드에 weeklyTrendRate를 담아서 보내면 프론트엔드 수정 없이 "변동률" 자리에 주간 변동률이 표시됨.
-    // 하지만 "어제 대비" -> "주간 추세"로 의미가 바뀌므로 프론트엔드 라벨도 바꿔야 함.
-    // 일단 API 응답에는 명시적인 필드를 추가하고, priceChange는 기존대로 두거나(어제대비), 덮어쓰거나 선택.
-    // 사용자가 "판단 척도를 바꾸자"고 했으므로, DashboardSummary에서 보여주는 메인 지표를 이것으로 교체하는 것이 맞음.
-    
     // 단순 증감 (오늘 - 어제)
     const countChange = todayTotalCount - yesterdayTotalCount; 
     
     // 순수 증가분 (기존 단지 기준 증가분, 음수면 0)
     const newLists = Math.max(0, todayExistingCount - yesterdayTotalCount);
 
-    // 4. 신고가/신저가 (New Highs/Lows) - 매매 기준, 최근 30일
-    // "최근 수집일 매매 매물" 중, 같은 단지 & 같은 평형대(평 단위 반올림)에서
-    // 지난 30일(최근일 제외) 동안의 최저가보다 더 싸거나(신저가), 최고가보다 더 비싼(신고가) 건수
-    // Use latest scraped date instead of 'now' to handle historical data
+    // 6. 신고가/신저가 (New Highs/Lows) - latestDate 기준
     const recordsResult = await prisma.$queryRaw<any[]>`
       WITH LatestDate AS (
         SELECT MAX(date(scrapedAt / 1000, 'unixepoch', '+9 hours')) as latestDate
@@ -156,7 +156,6 @@ router.get("/trend", async (req, res) => {
       JOIN PastStats p ON t.complexId = p.complexId AND t.pyung = p.pyung
     `;
     
-    // 안전하게 Number 변환
     const newLowCount = Number(recordsResult[0]?.lowCount || 0);
     const newHighCount = Number(recordsResult[0]?.highCount || 0);
 
@@ -171,12 +170,10 @@ router.get("/trend", async (req, res) => {
       })),
       summary: {
         todayTotal: todayTotalCount,
-        todayAvgPricePerPyeong: Math.round(todayAvgPrice), // 전체 평균도 여전히 보여줄 수 있음
-        // priceChange 필드에 "주간 단지별 변동률 평균"을 할당하여 메인 지표로 사용하게 함
+        todayAvgPricePerPyeong: Math.round(todayAvgPrice),
         priceChange: Math.round(weeklyTrendRate * 100) / 100, 
         countChange: countChange,
         newCount: newLists,
-        // 추가 정보
         avgPrice84: Math.round(standard84Price),
         newLowCount,
         newHighCount

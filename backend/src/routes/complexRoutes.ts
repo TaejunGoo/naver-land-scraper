@@ -23,43 +23,53 @@ router.get("/", async (req, res) => {
       orderBy: { createdAt: "desc" },
     });
 
-    // Get KST date ranges using utility
-    const { startTime, endTime } = getTodayKSTRange();
-    const { startTime: yesterdayStartTime, endTime: yesterdayEndTime } = getYesterdayKSTRange();
-
-    // 각 단지의 오늘 매물 수 계산 (유형별)
+    // 각 단지의 최근일 매물 수 계산 (유형별)
     const complexesWithCount = await Promise.all(
       complexes.map(async (complex: any) => {
-        // [수정] 오늘 데이터 조회
-        const todayCountsData = await prisma.listing.groupBy({
-          by: ["tradetype"],
-          where: {
-            complexId: complex.id,
-            scrapedAt: {
-              gte: startTime,
-              lt: endTime,
-            },
-          },
-          _count: true,
-        });
+        // 해당 단지의 최근 2개 수집일 찾기
+        const complexDatesResult = await prisma.$queryRaw<any[]>`
+          SELECT DISTINCT date(scrapedAt / 1000, 'unixepoch', '+9 hours') as date
+          FROM listings
+          WHERE complexId = ${complex.id}
+          ORDER BY date DESC
+          LIMIT 2
+        `;
 
-        // [수정] 어제 데이터 조회 (증감 계산용)
-        const yesterdayCountsData = await prisma.listing.groupBy({
-          by: ["tradetype"],
-          where: {
-            complexId: complex.id,
-            scrapedAt: {
-              gte: yesterdayStartTime,
-              lt: yesterdayEndTime,
-            },
-          },
-          _count: true,
-        });
+        const complexLatestDate = complexDatesResult[0]?.date;
+        const complexYesterdayDate = complexDatesResult[1]?.date;
+
+        // 최근일 데이터 조회
+        const todayCountsDataRaw = complexLatestDate ? await prisma.$queryRaw<any[]>`
+          SELECT tradetype, COUNT(*) as _count
+          FROM listings
+          WHERE complexId = ${complex.id}
+            AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date(${complexLatestDate})
+          GROUP BY tradetype
+        ` : [];
+
+        // 직전일 데이터 조회 (증감 계산용)
+        const yesterdayCountsDataRaw = complexYesterdayDate ? await prisma.$queryRaw<any[]>`
+          SELECT tradetype, COUNT(*) as _count
+          FROM listings
+          WHERE complexId = ${complex.id}
+            AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date(${complexYesterdayDate})
+          GROUP BY tradetype
+        ` : [];
+
+        // BigInt to Number 변환
+        const todayCountsData = todayCountsDataRaw.map(item => ({
+          tradetype: item.tradetype,
+          _count: Number(item._count)
+        }));
+        const yesterdayCountsData = yesterdayCountsDataRaw.map(item => ({
+          tradetype: item.tradetype,
+          _count: Number(item._count)
+        }));
 
         // Calculate stats using utility
         const stats = calculateListingStats(
-          todayCountsData as Array<{ tradetype: string; _count: number }>,
-          yesterdayCountsData as Array<{ tradetype: string; _count: number }>
+          todayCountsData,
+          yesterdayCountsData
         );
         const counts = stats.today;
         const yesterdayCounts = stats.yesterday;
@@ -314,32 +324,44 @@ router.get("/:id", async (req, res) => {
     `;
     const dataDaysCount = dateResult[0]?.data_count ? Number(dateResult[0].data_count) : 0;
 
-    // Get KST date ranges using utility
-    const { startTime, endTime } = getTodayKSTRange();
-    const { startTime: yesterdayStartTime, endTime: yesterdayEndTime } = getYesterdayKSTRange();
+    // 최근 수집일 확인
+    const latestDateResult = await prisma.$queryRaw<any[]>`
+      SELECT MAX(date(scrapedAt / 1000, 'unixepoch', '+9 hours')) as latestDate
+      FROM listings
+      WHERE complexId = ${Number(id)}
+    `;
+    const latestDate = latestDateResult[0]?.latestDate;
 
-    const todayCountsData = await prisma.listing.groupBy({
-      by: ["tradetype"],
-      where: {
-        complexId: Number(id),
-        scrapedAt: { gte: startTime, lt: endTime },
-      },
-      _count: true,
-    });
+    const todayCountsDataRaw = latestDate ? await prisma.$queryRaw<any[]>`
+      SELECT tradetype, COUNT(*) as _count
+      FROM listings
+      WHERE complexId = ${Number(id)}
+        AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date(${latestDate})
+      GROUP BY tradetype
+    ` : [];
 
-    const yesterdayCountsData = await prisma.listing.groupBy({
-      by: ["tradetype"],
-      where: {
-        complexId: Number(id),
-        scrapedAt: { gte: yesterdayStartTime, lt: yesterdayEndTime },
-      },
-      _count: true,
-    });
+    const yesterdayCountsDataRaw = latestDate ? await prisma.$queryRaw<any[]>`
+      SELECT tradetype, COUNT(*) as _count
+      FROM listings
+      WHERE complexId = ${Number(id)}
+        AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date(${latestDate}, '-1 day')
+      GROUP BY tradetype
+    ` : [];
+
+    // BigInt to Number 변환
+    const todayCountsData = todayCountsDataRaw.map(item => ({
+      tradetype: item.tradetype,
+      _count: Number(item._count)
+    }));
+    const yesterdayCountsData = yesterdayCountsDataRaw.map(item => ({
+      tradetype: item.tradetype,
+      _count: Number(item._count)
+    }));
 
     // Calculate stats using utility
     const listingStats = calculateListingStats(
-      todayCountsData as Array<{ tradetype: string; _count: number }>,
-      yesterdayCountsData as Array<{ tradetype: string; _count: number }>
+      todayCountsData,
+      yesterdayCountsData
     );
 
     res.json({
