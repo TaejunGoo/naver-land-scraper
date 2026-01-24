@@ -7,7 +7,7 @@ import {
   TrendingDown,
   LineChart,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
 } from "lucide-react";
 
 export function DashboardSummary() {
@@ -29,21 +29,28 @@ export function DashboardSummary() {
       <Card className="bg-white/50 backdrop-blur-sm">
         <CardContent className="p-4 flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-500 mb-1">전일 대비 매물 증감</p>
+            <p className="text-xs font-medium text-slate-500 mb-1">
+              전일 대비 매물 증감
+            </p>
             <div className="flex items-baseline gap-2">
-              <span className={`text-2xl font-bold ${summary.countChange > 0 ? 'text-blue-500' : summary.countChange < 0 ? 'text-red-500' : 'text-slate-700'}`}>
-                {summary.countChange > 0 ? '+' : ''}{summary.countChange}
+              <span
+                className={`text-2xl font-bold ${summary.countChange > 0 ? "text-blue-500" : summary.countChange < 0 ? "text-red-500" : "text-slate-700"}`}
+              >
+                {summary.countChange > 0 ? "+" : ""}
+                {summary.countChange}
               </span>
               <span className="text-xs text-slate-400">건</span>
             </div>
           </div>
-          <div className={`p-2 rounded-lg ${summary.countChange > 0 ? 'bg-blue-100' : summary.countChange < 0 ? 'bg-red-100' : 'bg-slate-100'}`}>
+          <div
+            className={`p-2 rounded-lg ${summary.countChange > 0 ? "bg-blue-100" : summary.countChange < 0 ? "bg-red-100" : "bg-slate-100"}`}
+          >
             {summary.countChange > 0 ? (
               <ArrowUpRight className="w-5 h-5 text-blue-600" />
             ) : summary.countChange < 0 ? (
               <ArrowDownRight className="w-5 h-5 text-red-600" />
             ) : (
-               <LineChart className="w-5 h-5 text-slate-500" />
+              <LineChart className="w-5 h-5 text-slate-500" />
             )}
           </div>
         </CardContent>
@@ -53,21 +60,26 @@ export function DashboardSummary() {
       <Card className="bg-white/50 backdrop-blur-sm">
         <CardContent className="p-4 flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-500 mb-1">주간 시세 변동</p>
+            <p className="text-xs font-medium text-slate-500 mb-1">
+              주간 시세 변동
+            </p>
             <div className="flex items-baseline gap-2">
-              <span className={`text-2xl font-bold ${summary.priceChange > 0 ? 'text-red-500' : summary.priceChange < 0 ? 'text-blue-500' : 'text-slate-700'}`}>
-               {summary.priceChange > 0 ? '+' : ''}{summary.priceChange}%
+              <span
+                className={`text-2xl font-bold ${summary.priceChange > 0 ? "text-red-500" : summary.priceChange < 0 ? "text-blue-500" : "text-slate-700"}`}
+              >
+                {summary.priceChange > 0 ? "+" : ""}
+                {summary.priceChange}%
               </span>
               <span className="text-xs text-slate-400">전주 대비</span>
             </div>
           </div>
           <div className="bg-slate-100 p-2 rounded-lg">
             {summary.priceChange > 0 ? (
-               <TrendingUp className="w-5 h-5 text-red-600" />
+              <TrendingUp className="w-5 h-5 text-red-600" />
             ) : summary.priceChange < 0 ? (
-               <TrendingDown className="w-5 h-5 text-blue-600" />
+              <TrendingDown className="w-5 h-5 text-blue-600" />
             ) : (
-               <LineChart className="w-5 h-5 text-slate-500" />
+              <LineChart className="w-5 h-5 text-slate-500" />
             )}
           </div>
         </CardContent>
@@ -78,7 +90,9 @@ export function DashboardSummary() {
         <Card className="bg-white/50 backdrop-blur-sm hover:shadow-lg transition-shadow cursor-pointer">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500 mb-1">신고가 매물</p>
+              <p className="text-xs font-medium text-slate-500 mb-1">
+                신고가 매물
+              </p>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-red-700">
                   {summary.newHighCount || 0}
@@ -98,7 +112,9 @@ export function DashboardSummary() {
         <Card className="bg-white/50 backdrop-blur-sm hover:shadow-lg transition-shadow cursor-pointer">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500 mb-1">신저가 매물</p>
+              <p className="text-xs font-medium text-slate-500 mb-1">
+                신저가 매물
+              </p>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-blue-700">
                   {summary.newLowCount || 0}

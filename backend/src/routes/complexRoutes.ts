@@ -324,13 +324,16 @@ router.get("/:id", async (req, res) => {
     `;
     const dataDaysCount = dateResult[0]?.data_count ? Number(dateResult[0].data_count) : 0;
 
-    // 최근 수집일 확인
-    const latestDateResult = await prisma.$queryRaw<any[]>`
-      SELECT MAX(date(scrapedAt / 1000, 'unixepoch', '+9 hours')) as latestDate
+    // 해당 단지의 최근 2개 수집일 찾기 (이전 '수집일' 기준으로 증감 계산)
+    const datesResult = await prisma.$queryRaw<any[]>`
+      SELECT DISTINCT date(scrapedAt / 1000, 'unixepoch', '+9 hours') as date
       FROM listings
       WHERE complexId = ${Number(id)}
+      ORDER BY date DESC
+      LIMIT 2
     `;
-    const latestDate = latestDateResult[0]?.latestDate;
+    const latestDate = datesResult[0]?.date;
+    const previousDate = datesResult[1]?.date;
 
     const todayCountsDataRaw = latestDate ? await prisma.$queryRaw<any[]>`
       SELECT tradetype, COUNT(*) as _count
@@ -340,11 +343,12 @@ router.get("/:id", async (req, res) => {
       GROUP BY tradetype
     ` : [];
 
-    const yesterdayCountsDataRaw = latestDate ? await prisma.$queryRaw<any[]>`
+    // 이전 수집일 데이터 조회 (증감 계산용)
+    const yesterdayCountsDataRaw = previousDate ? await prisma.$queryRaw<any[]>`
       SELECT tradetype, COUNT(*) as _count
       FROM listings
       WHERE complexId = ${Number(id)}
-        AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date(${latestDate}, '-1 day')
+        AND date(scrapedAt / 1000, 'unixepoch', '+9 hours') = date(${previousDate})
       GROUP BY tradetype
     ` : [];
 

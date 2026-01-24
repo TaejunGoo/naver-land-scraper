@@ -65,10 +65,10 @@ export function ComplexInfo({
       }
 
       const lines = tags.filter((tag) =>
-        SUBWAY_LINES.some((line) => tag.includes(line))
+        SUBWAY_LINES.some((line) => tag.includes(line)),
       );
       const others = tags.filter(
-        (tag) => !SUBWAY_LINES.some((line) => tag.includes(line))
+        (tag) => !SUBWAY_LINES.some((line) => tag.includes(line)),
       );
 
       setSubwayLines(lines);
@@ -77,7 +77,8 @@ export function ComplexInfo({
   }, [isEditing, complex]);
 
   const updateMutation = useMutation({
-    mutationFn: (data: ComplexUpdateInput) => complexApi.update(complex.id, data),
+    mutationFn: (data: ComplexUpdateInput) =>
+      complexApi.update(complex.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["complex", String(complex.id)],
@@ -103,7 +104,7 @@ export function ComplexInfo({
     showAlert(
       "단지 삭제",
       `'${complex.name}' 단지를 삭제하시겠습니까? 관련 매물 데이터도 모두 삭제됩니다.`,
-      () => deleteMutation.mutate()
+      () => deleteMutation.mutate(),
     );
   };
 
@@ -159,7 +160,7 @@ export function ComplexInfo({
                       <Badge
                         key={index}
                         className={`${getTagColor(
-                          tag
+                          tag,
                         )} text-white border-0 text-[10px] px-1.5 py-0`}
                       >
                         {tag}
@@ -288,14 +289,20 @@ export function ComplexInfo({
                   <div className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center justify-center gap-1">
                     {currentListingCounts?.total || 0}
                     {complex.listingStats?.diff?.total ? (
-                      <span className={`text-xs ${complex.listingStats.diff.total > 0 ? "text-red-500" : "text-blue-500"}`}>
-                        {complex.listingStats.diff.total > 0 ? "▲" : "▼"}{Math.abs(complex.listingStats.diff.total)}
+                      <span
+                        className={`text-xs ${complex.listingStats.diff.total > 0 ? "text-red-500" : "text-blue-500"}`}
+                      >
+                        {complex.listingStats.diff.total > 0 ? "▲" : "▼"}
+                        {Math.abs(complex.listingStats.diff.total)}
                       </span>
                     ) : null}
                   </div>
-                  {complex.listingStats?.diff?.total !== undefined && complex.listingStats.diff.total !== 0 && (
-                    <div className="text-[10px] text-slate-400 mt-0.5">직전일 대비</div>
-                  )}
+                  {complex.listingStats?.diff?.total !== undefined &&
+                    complex.listingStats.diff.total !== 0 && (
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        전일 대비
+                      </div>
+                    )}
                 </div>
                 <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-100 dark:border-red-900/30 text-center relative group">
                   <div className="text-xs text-red-600 dark:text-red-400 mb-1">
@@ -303,9 +310,12 @@ export function ComplexInfo({
                   </div>
                   <div className="text-xl font-bold text-red-700 dark:text-red-400 flex items-center justify-center gap-1">
                     {currentListingCounts?.sale || 0}
-                     {complex.listingStats?.diff?.sale ? (
-                      <span className={`text-xs ${complex.listingStats.diff.sale > 0 ? "text-red-600" : "text-blue-600"}`}>
-                        {complex.listingStats.diff.sale > 0 ? "▲" : "▼"}{Math.abs(complex.listingStats.diff.sale)}
+                    {complex.listingStats?.diff?.sale ? (
+                      <span
+                        className={`text-xs ${complex.listingStats.diff.sale > 0 ? "text-red-600" : "text-blue-600"}`}
+                      >
+                        {complex.listingStats.diff.sale > 0 ? "▲" : "▼"}
+                        {Math.abs(complex.listingStats.diff.sale)}
                       </span>
                     ) : null}
                   </div>
@@ -317,21 +327,27 @@ export function ComplexInfo({
                   <div className="text-xl font-bold text-blue-700 dark:text-blue-400 flex items-center justify-center gap-1">
                     {currentListingCounts?.jeonse || 0}
                     {complex.listingStats?.diff?.jeonse ? (
-                      <span className={`text-xs ${complex.listingStats.diff.jeonse > 0 ? "text-red-500" : "text-blue-500"}`}>
-                        {complex.listingStats.diff.jeonse > 0 ? "▲" : "▼"}{Math.abs(complex.listingStats.diff.jeonse)}
+                      <span
+                        className={`text-xs ${complex.listingStats.diff.jeonse > 0 ? "text-red-500" : "text-blue-500"}`}
+                      >
+                        {complex.listingStats.diff.jeonse > 0 ? "▲" : "▼"}
+                        {Math.abs(complex.listingStats.diff.jeonse)}
                       </span>
                     ) : null}
                   </div>
                 </div>
                 <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-xl border border-green-100 dark:border-green-900/30 text-center relative group">
-                   <div className="text-xs text-green-600 dark:text-green-400 mb-1">
+                  <div className="text-xs text-green-600 dark:text-green-400 mb-1">
                     월세
                   </div>
                   <div className="text-xl font-bold text-green-700 dark:text-green-400 flex items-center justify-center gap-1">
                     {currentListingCounts?.rent || 0}
                     {complex.listingStats?.diff?.rent ? (
-                      <span className={`text-xs ${complex.listingStats.diff.rent > 0 ? "text-red-500" : "text-blue-500"}`}>
-                        {complex.listingStats.diff.rent > 0 ? "▲" : "▼"}{Math.abs(complex.listingStats.diff.rent)}
+                      <span
+                        className={`text-xs ${complex.listingStats.diff.rent > 0 ? "text-red-500" : "text-blue-500"}`}
+                      >
+                        {complex.listingStats.diff.rent > 0 ? "▲" : "▼"}
+                        {Math.abs(complex.listingStats.diff.rent)}
                       </span>
                     ) : null}
                   </div>
@@ -404,21 +420,35 @@ export function ComplexInfo({
                 </h3>
                 <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500 dark:text-slate-400">사용승인일</span>
-                    <span className="font-medium">{complex.approvalDate || "-"}</span>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      사용승인일
+                    </span>
+                    <span className="font-medium">
+                      {complex.approvalDate || "-"}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500 dark:text-slate-400">네이버 ID</span>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      네이버 ID
+                    </span>
                     <span className="font-mono bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600 text-[11px] text-slate-600 dark:text-slate-300">
                       {complex.naverComplexId || "-"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500 dark:text-slate-400">정보갱신일</span>
-                    <span className="font-medium">{complex.infoScrapedAt ? formatDateKST(new Date(complex.infoScrapedAt)) : ""}</span>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      정보갱신일
+                    </span>
+                    <span className="font-medium">
+                      {complex.infoScrapedAt
+                        ? formatDateKST(new Date(complex.infoScrapedAt))
+                        : ""}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500 dark:text-slate-400">네이버 부동산</span>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      네이버 부동산
+                    </span>
                     {complex.naverComplexId ? (
                       <a
                         href={`https://new.land.naver.com/complexes/${complex.naverComplexId}`}
@@ -447,7 +477,8 @@ export function ComplexInfo({
                     </p>
                   ) : (
                     <p className="text-sm text-slate-400 italic">
-                      등록된 메모가 없습니다. [수정] 버튼을 눌러 메모를 입력해 보세요.
+                      등록된 메모가 없습니다. [수정] 버튼을 눌러 메모를 입력해
+                      보세요.
                     </p>
                   )}
                 </div>
