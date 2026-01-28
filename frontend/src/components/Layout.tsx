@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Building2, ChevronLeft } from 'lucide-react'
 import { useHeaderStore } from '../lib/store'
 import { Button } from './ui/button'
+import { Analytics } from "@vercel/analytics/react"
 
 interface LayoutProps {
   children: ReactNode
@@ -58,6 +59,7 @@ export default function Layout({ children }: LayoutProps) {
       <main className="container mx-auto px-4 py-8">
         {children}
       </main>
+      <Analytics/>
     </div>
   )
 }
