@@ -72,41 +72,34 @@ export default function ComplexDetail() {
                 <span className="hidden sm:inline">네이버 부동산</span>
               </Button>
             </Link>
+            {/* Demo mode: Scraping and export buttons are disabled */}
             <Button
               variant="outline"
-              onClick={handleExportExcel}
-              disabled={isExporting}
+              disabled
               size="sm"
               className="gap-1.5 h-9"
+              title="데모 모드에서는 사용할 수 없습니다"
             >
-              <Download
-                className={`w-3.5 h-3.5 ${isExporting ? "animate-pulse" : ""}`}
-              />
+              <Download className="w-3.5 h-3.5 opacity-50" />
               <span className="hidden sm:inline">엑셀 저장</span>
             </Button>
             <Button
               variant="outline"
-              onClick={handleScrapeInfo}
-              disabled={isRefreshingInfo}
+              disabled
               size="sm"
               className="gap-1.5 h-9"
+              title="데모 모드에서는 사용할 수 없습니다"
             >
-              <Info
-                className={`w-3.5 h-3.5 ${
-                  isRefreshingInfo ? "animate-spin" : ""
-                }`}
-              />
+              <Info className="w-3.5 h-3.5 opacity-50" />
               <span className="hidden sm:inline">정보 갱신</span>
             </Button>
             <Button
-              onClick={handleScrape}
-              disabled={isScraping}
+              disabled
               size="sm"
               className="gap-1.5 h-9"
+              title="데모 모드에서는 사용할 수 없습니다"
             >
-              <RefreshCw
-                className={`w-3.5 h-3.5 ${isScraping ? "animate-spin" : ""}`}
-              />
+              <RefreshCw className="w-3.5 h-3.5 opacity-50" />
               <span className="hidden sm:inline">매물 갱신</span>
             </Button>
           </div>

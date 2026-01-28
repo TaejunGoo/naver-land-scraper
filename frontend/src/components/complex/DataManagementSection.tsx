@@ -6,45 +6,14 @@ import { useAlertStore } from "@/lib/store";
 export function DataManagementSection() {
   const { showAlert } = useAlertStore();
 
+  // Demo mode: Functions disabled
   const handleDownloadBackup = () => {
-    window.location.assign("/api/backups/download");
+    showAlert("데이터 내보내기", "데모 모드에서는 사용할 수 없습니다.");
   };
 
   const handleUploadRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    showAlert(
-      "데이터 복구 확인",
-      `'${file.name}' 파일로 데이터를 복구하시겠습니까? 현재 저장된 모든 단지 정보와 시세 데이터가 해당 파일의 내용으로 완전히 교체됩니다.`,
-      async () => {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        try {
-          const response = await fetch("/api/backups/upload", {
-            method: "POST",
-            body: formData,
-          });
-
-          if (response.ok) {
-            showAlert(
-              "복구 성공",
-              "데이터가 성공적으로 복구되었습니다. 최신 정보를 불러오기 위해 페이지를 새로고침합니다.",
-              () => {
-                window.location.reload();
-              }
-            );
-          } else {
-            throw new Error("업로드 실패");
-          }
-        } catch {
-          showAlert("오류 발생", "데이터를 복구하는 중 문제가 발생했습니다.");
-        }
-      }
-    );
-
     e.target.value = "";
+    showAlert("데이터 불러오기", "데모 모드에서는 사용할 수 없습니다.");
   };
 
   return (
@@ -78,7 +47,9 @@ export function DataManagementSection() {
                   variant="outline"
                   size="sm"
                   onClick={handleDownloadBackup}
+                  disabled
                   className="w-full mt-2 bg-white"
+                  title="데모 모드에서는 사용할 수 없습니다"
                 >
                   파일로 저장하기
                 </Button>
@@ -108,12 +79,15 @@ export function DataManagementSection() {
                     className="hidden"
                     accept=".db"
                     onChange={handleUploadRestore}
+                    disabled
                   />
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => document.getElementById("db-upload")?.click()}
+                    disabled
                     className="w-full bg-white"
+                    title="데모 모드에서는 사용할 수 없습니다"
                   >
                     파일 선택 및 복구
                   </Button>

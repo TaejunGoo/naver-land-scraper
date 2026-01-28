@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { complexApi, listingApi, type Listing } from "@/lib/api";
 import { formatDateKST, getTodayKST } from "@/lib/format";
 import { useAlertStore } from "@/lib/store";
-import { downloadBlob } from "@/lib/utils";
+// Demo mode: downloadBlob not used
+// import { downloadBlob } from "@/lib/utils";
 
 export function useComplexDetail(id: string | undefined) {
   const queryClient = useQueryClient();
@@ -38,55 +39,50 @@ export function useComplexDetail(id: string | undefined) {
     enabled: !!id,
   });
 
-  // 매물 수집 실행
+  // Demo mode: Scraping disabled
   const scrapeMutation = useMutation({
     mutationFn: () => complexApi.scrape(Number(id)),
-    onSuccess: (res) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["complex", id] });
       queryClient.invalidateQueries({ queryKey: ["listings", id] });
       setIsScraping(false);
-      showAlert(
-        "매물 갱신 완료",
-        `${res.data.count}개의 매물을 업데이트했습니다.`
-      );
+      showAlert("매물 갱신", "데모 모드에서는 사용할 수 없습니다.");
     },
     onError: (err: any) => {
       setIsScraping(false);
       showAlert(
         "매물 갱신 실패",
-        err.response?.data?.message || "오류가 발생했습니다."
+        err.message || "오류가 발생했습니다."
       );
     },
   });
 
   // 정보 갱신 실행
+  // Demo mode: Info scraping disabled
   const scrapeInfoMutation = useMutation({
     mutationFn: () => complexApi.scrapeInfo(Number(id)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["complex", id] });
       setIsRefreshingInfo(false);
-      showAlert("정보 갱신 완료", "단지 상세 정보를 업데이트했습니다.");
+      showAlert("정보 갱신", "데모 모드에서는 사용할 수 없습니다.");
     },
     onError: (err: any) => {
       setIsRefreshingInfo(false);
       showAlert(
         "정보 갱신 실패",
-        err.response?.data?.message || "오류가 발생했습니다."
+        err.message || "오류가 발생했습니다."
       );
     },
   });
 
-  // 엑셀 내보내기 실행
+  // Demo mode: Excel export disabled
   const exportMutation = useMutation({
     mutationFn: () => complexApi.exportByIdExcel(Number(id)),
-    onSuccess: (response: any) => {
-      const filename = `${complex?.name || "단지"}_매물목록_${
-        new Date().toISOString().split("T")[0]
-      }.xlsx`;
-      downloadBlob(response.data, filename);
+    onSuccess: () => {
+      showAlert("엑셀 내보내기", "데모 모드에서는 사용할 수 없습니다.");
     },
     onError: () => {
-      showAlert("오류", "엑셀 파일을 생성하는 중 문제가 발생했습니다.");
+      showAlert("오류", "데모 모드에서는 사용할 수 없습니다.");
     },
   });
 

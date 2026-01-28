@@ -10,13 +10,13 @@ import {
 } from "@/components/ui/select";
 
 interface ComplexListHeaderProps {
-  onAddClick: () => void;
-  onScrapeAllClick: () => void;
-  onExportExcelClick: () => void;
-  onCreateTestClick: () => void;
-  isScrapingAll: boolean;
-  isCreatingTest: boolean;
-  hasComplexes: boolean;
+  onAddClick?: () => void; // Demo mode: optional
+  onScrapeAllClick?: () => void; // Demo mode: optional
+  onExportExcelClick?: () => void; // Demo mode: optional
+  onCreateTestClick?: () => void; // Demo mode: optional
+  isScrapingAll?: boolean; // Demo mode: optional
+  isCreatingTest?: boolean; // Demo mode: optional
+  hasComplexes?: boolean; // Demo mode: optional
   sortBy: string;
   setSortBy: (val: string) => void;
   sortOrder: string;
@@ -24,13 +24,6 @@ interface ComplexListHeaderProps {
 }
 
 export function ComplexListHeader({
-  onAddClick,
-  onScrapeAllClick,
-  onExportExcelClick,
-  onCreateTestClick,
-  isScrapingAll,
-  isCreatingTest,
-  hasComplexes,
   sortBy,
   setSortBy,
   sortOrder,
@@ -47,36 +40,36 @@ export function ComplexListHeader({
               추세 분석
             </Button>
           </Link>
+          {/* Demo mode: Buttons are disabled */}
           <Button
-            onClick={onExportExcelClick}
             variant="outline"
-            disabled={!hasComplexes}
+            disabled
+            title="데모 모드에서는 사용할 수 없습니다"
           >
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="w-4 h-4 mr-2 opacity-50" />
             엑셀 내보내기
           </Button>
           <Button
-            onClick={onCreateTestClick}
-            disabled={isCreatingTest}
             variant="outline"
+            disabled
+            title="데모 모드에서는 사용할 수 없습니다"
           >
-            <Beaker
-              className={`w-4 h-4 mr-2 ${isCreatingTest ? "animate-spin" : ""}`}
-            />
-            {isCreatingTest ? "생성 중..." : "테스트 단지 생성"}
+            <Beaker className="w-4 h-4 mr-2 opacity-50" />
+            테스트 단지 생성
           </Button>
           <Button
-            onClick={onScrapeAllClick}
-            disabled={isScrapingAll || !hasComplexes}
             variant="default"
+            disabled
+            title="데모 모드에서는 사용할 수 없습니다"
           >
-            <RefreshCw
-              className={`w-4 h-4 mr-2 ${isScrapingAll ? "animate-spin" : ""}`}
-            />
-            {isScrapingAll ? "갱신 중..." : "전체 매물 갱신"}
+            <RefreshCw className="w-4 h-4 mr-2 opacity-50" />
+            전체 매물 갱신
           </Button>
-          <Button onClick={onAddClick}>
-            <Plus className="w-4 h-4 mr-2" />
+          <Button
+            disabled
+            title="데모 모드에서는 사용할 수 없습니다"
+          >
+            <Plus className="w-4 h-4 mr-2 opacity-50" />
             단지 추가
           </Button>
         </div>

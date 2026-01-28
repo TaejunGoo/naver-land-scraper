@@ -1,36 +1,40 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { listingApi } from '@/lib/api'
+// Demo mode: useQueryClient not used
+// import { useQueryClient } from '@tanstack/react-query'
+// Demo mode: listingApi not used
+// import { listingApi } from '@/lib/api'
 import { formatPrice, formatArea } from '@/lib/format'
 import { Button } from '@/components/ui/button'
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { useAlertStore } from '@/lib/store'
+// Demo mode: useAlertStore not used
+// import { useAlertStore } from '@/lib/store'
 import { ArrowUpDown, Trash2 } from 'lucide-react'
 
 interface ListingTableProps {
   listings: any[] | undefined
   listingsLoading: boolean
   handleSort: (field: string) => void
-  complexId: string
+  complexId?: string // Demo mode: optional
 }
 
 export function ListingTable({
   listings,
   listingsLoading,
   handleSort,
-  complexId
 }: ListingTableProps) {
-  const queryClient = useQueryClient()
-  const showAlert = useAlertStore((state) => state.showAlert)
+  // Demo mode: queryClient not used
+  // const queryClient = useQueryClient()
+  // Demo mode: Not used
+  // const showAlert = useAlertStore((state) => state.showAlert)
   const [selectedListings, setSelectedListings] = useState<Set<number>>(new Set())
   const [displayCount, setDisplayCount] = useState(50)
   const [showAll, setShowAll] = useState(false)
@@ -55,21 +59,22 @@ export function ListingTable({
     }
   }
 
-  const batchDeleteMutation = useMutation({
-    mutationFn: (ids: number[]) => listingApi.batchDelete(ids),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['listings', complexId] })
-      setSelectedListings(new Set())
-    },
-  })
+  // Demo mode: Delete mutations not used
+  // const batchDeleteMutation = useMutation({
+  //   mutationFn: (ids: number[]) => listingApi.batchDelete(ids),
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ['listings', complexId] })
+  //     setSelectedListings(new Set())
+  //   },
+  // })
 
-  const deleteAllMutation = useMutation({
-    mutationFn: () => listingApi.deleteAll(Number(complexId)),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['listings', complexId] })
-      setSelectedListings(new Set())
-    },
-  })
+  // const deleteAllMutation = useMutation({
+  //   mutationFn: () => listingApi.deleteAll(Number(complexId)),
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ['listings', complexId] })
+  //     setSelectedListings(new Set())
+  //   },
+  // })
 
   if (listingsLoading) {
     return (
@@ -112,39 +117,28 @@ export function ListingTable({
             </div>
           )}
         </div>
-        
+
+        {/* Demo mode: Delete buttons are disabled */}
         <div className="flex gap-2">
           {selectedListings.size > 0 && (
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => {
-                showAlert(
-                  "선택 삭제 확인",
-                  `${selectedListings.size}개의 매물을 정말 삭제하시겠습니까?`,
-                  () => batchDeleteMutation.mutate(Array.from(selectedListings))
-                )
-              }}
-              disabled={batchDeleteMutation.isPending}
+              disabled
               className="h-8 text-xs gap-1.5"
+              title="데모 모드에서는 사용할 수 없습니다"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-3.5 w-3.5 opacity-50" />
               선택 삭제
             </Button>
           )}
-          {listings.length > 0 && (
+          {listings && listings.length > 0 && (
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                showAlert(
-                  "전체 삭제 경고",
-                  "이 단지의 모든 수집된 매물 데이터가 삭제됩니다. 계속하시겠습니까?",
-                  () => deleteAllMutation.mutate()
-                )
-              }}
-              disabled={deleteAllMutation.isPending}
+              disabled
               className="h-8 text-xs text-destructive hover:bg-destructive/10 border-destructive/30"
+              title="데모 모드에서는 사용할 수 없습니다"
             >
               전체 삭제
             </Button>

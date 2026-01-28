@@ -1,9 +1,11 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+// Demo mode: navigate not used
+// import { useNavigate } from "react-router-dom";
 import { complexApi, type Complex, type ComplexCreateInput } from "@/lib/api";
 import { useAlertStore, useHeaderStore } from "@/lib/store";
-import { downloadBlob } from "@/lib/utils";
+// Demo mode: downloadBlob not used
+// import { downloadBlob } from "@/lib/utils";
 import { SUBWAY_LINES } from "@/lib/constants";
 
 export interface ComplexFormData {
@@ -31,7 +33,8 @@ export function useComplexList() {
 
   const { showAlert } = useAlertStore();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
+  // Demo mode: navigate not used
+  // const navigate = useNavigate();
   const setHeader = useHeaderStore((state) => state.setHeader);
   const resetHeader = useHeaderStore((state) => state.resetHeader);
 
@@ -86,29 +89,17 @@ export function useComplexList() {
     setFormData(initialFormData);
   }, []);
 
-  // Create mutation
+  // Demo mode: Create disabled
   const createMutation = useMutation({
     mutationFn: (data: ComplexCreateInput) => complexApi.create(data),
-    onSuccess: async (response) => {
-      const newComplex = response.data;
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["complexes"] });
       setShowForm(false);
       resetForm();
-
-      if (newComplex.naverComplexId) {
-        try {
-          await complexApi.scrapeInfo(newComplex.id);
-          queryClient.invalidateQueries({ queryKey: ["complexes"] });
-          showAlert("등록 및 수집 완료", "단지 정보를 성공적으로 수집했습니다.");
-        } catch {
-          showAlert("등록 성공", "단지는 등록되었으나 정보 수집에 실패했습니다.");
-        }
-      } else {
-        showAlert("등록 완료", "새 단지가 등록되었습니다.");
-      }
+      showAlert("등록", "데모 모드에서는 사용할 수 없습니다.");
     },
-    onError: () => {
-      showAlert("등록 실패", "단지를 저장하는 중 오류가 발생했습니다.");
+    onError: (err: any) => {
+      showAlert("등록 실패", err.message || "오류가 발생했습니다.");
     },
   });
 
@@ -135,53 +126,39 @@ export function useComplexList() {
     },
   });
 
-  // Scrape all mutation
+  // Demo mode: Scrape all disabled
   const scrapeAllMutation = useMutation({
     mutationFn: () => complexApi.scrapeAll(),
-    onSuccess: (response) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["complexes"] });
       queryClient.invalidateQueries({ queryKey: ["stats", "trend"] });
-      const data = response.data;
-      showAlert(
-        "수집 완료",
-        `전체 데이터 수집이 완료되었습니다!\n${data.successComplexes}/${data.totalComplexes}개 단지, 총 ${data.totalListings}개 매물 수집`
-      );
+      showAlert("전체 수집", "데모 모드에서는 사용할 수 없습니다.");
     },
     onError: () => {
       showAlert("수집 실패", "전체 데이터 수집에 실패했습니다.");
     },
   });
 
-  // Create test complex mutation
+  // Demo mode: Create test complex disabled
   const createTestComplexMutation = useMutation({
     mutationFn: (days: number) => complexApi.createTestComplex(days),
-    onSuccess: (response) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["complexes"] });
-      const data = response.data;
-      showAlert(
-        "테스트 단지 생성",
-        `테스트 단지 생성 완료! ${data.count}개의 더미 데이터가 포함되어 있습니다.`
-      );
-      setTimeout(() => {
-        if (data.complexId) {
-          navigate(`/complex/${data.complexId}`);
-        }
-      }, 1000);
+      showAlert("테스트 단지 생성", "데모 모드에서는 사용할 수 없습니다.");
     },
     onError: () => {
       showAlert("생성 실패", "테스트 단지 생성에 실패했습니다.");
     },
   });
 
-  // Export Excel mutation
+  // Demo mode: Export Excel disabled
   const exportExcelMutation = useMutation({
     mutationFn: () => complexApi.exportAllExcel(),
-    onSuccess: (response) => {
-      const filename = `전체_데이터_추출_${new Date().toISOString().split("T")[0]}.xlsx`;
-      downloadBlob(response.data, filename);
+    onSuccess: () => {
+      showAlert("엑셀 내보내기", "데모 모드에서는 사용할 수 없습니다.");
     },
     onError: () => {
-      showAlert("오류", "엑셀 파일을 생성하는 중 문제가 발생했습니다.");
+      showAlert("오류", "데모 모드에서는 사용할 수 없습니다.");
     },
   });
 

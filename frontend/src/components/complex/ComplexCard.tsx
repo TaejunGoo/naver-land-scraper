@@ -1,4 +1,4 @@
-import { memo, useMemo, useCallback } from "react";
+import { memo, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Pencil } from "lucide-react";
 import { Complex } from "@/lib/api";
@@ -15,12 +15,11 @@ import { getTagColor } from "@/lib/constants";
 
 interface ComplexCardProps {
   complex: Complex;
-  onEdit: (complex: Complex) => void;
+  onEdit?: (complex: Complex) => void; // Demo mode: optional
 }
 
 export const ComplexCard = memo(function ComplexCard({
   complex,
-  onEdit,
 }: ComplexCardProps) {
   // 사용승인일 기준 연차 계산 (memoized)
   const yearsSinceApproval = useMemo(() => {
@@ -63,11 +62,6 @@ export const ComplexCard = memo(function ComplexCard({
     return [];
   }, [complex.tags]);
 
-  // 편집 버튼 클릭 핸들러 (memoized)
-  const handleEditClick = useCallback(() => {
-    onEdit(complex);
-  }, [onEdit, complex]);
-
   return (
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader className="space-y-0 pb-2">
@@ -86,14 +80,15 @@ export const ComplexCard = memo(function ComplexCard({
                 </Button>
               </a>
             )}
+            {/* Demo mode: Edit button is disabled */}
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleEditClick}
+              disabled
               className="h-6 w-6"
-              title="단지 정보 수정"
+              title="데모 모드에서는 사용할 수 없습니다"
             >
-              <Pencil className="w-4 h-4" />
+              <Pencil className="w-4 h-4 opacity-50" />
             </Button>
           </div>
         </CardTitle>
