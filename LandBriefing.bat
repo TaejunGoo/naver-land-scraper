@@ -88,9 +88,17 @@ echo.
 :: PORT 환경변수를 지정하여 빌드 모드 포트를 분리합니다.
 start /b cmd /c "cd backend && set PORT=%APP_PORT% && npm run dev"
 
-:: 브라우저 대기 및 실행
-timeout /t 5 >nul
-start http://localhost:%APP_PORT%
+:: 서버 준비 대기 (동적 polling - 실제 서버 응답 확인)
+echo 서버가 준비될 때까지 대기 중...
+set APP_PORT=%APP_PORT%
+node wait-for-server.js
+if %errorlevel% neq 0 (
+    echo [경고] 서버 대기 시간 초과. 브라우저를 수동으로 열어주세요.
+    pause
+) else (
+    :: 브라우저 실행
+    start http://localhost:%APP_PORT%
+)
 
 echo.
 echo ==========================================
