@@ -146,6 +146,16 @@ export const complexApi = {
 };
 
 export const statsApi = {
+  getLatestDate: async () => {
+    // Get the latest scraped date from sample data
+    const dates = sampleData.listings.map((l: any) =>
+      new Date(l.scrapedAt).toISOString().split('T')[0]
+    );
+    const latestDate = dates.sort().reverse()[0];
+
+    return mockResponse({ latestDate });
+  },
+
   getTrend: async (days: number = 30) => {
     // Group listings by date
     const listingsByDate: Record<string, any[]> = {};

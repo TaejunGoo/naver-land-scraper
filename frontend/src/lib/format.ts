@@ -1,3 +1,16 @@
+import sampleData from '../data/sample-data.json';
+
+// Demo mode: Calculate the latest scraped date from sample data
+const getLatestDateFromSampleData = (): string => {
+  const dates = sampleData.listings.map((l: any) =>
+    new Date(l.scrapedAt).toISOString().split('T')[0]
+  );
+  return dates.sort().reverse()[0] || formatDateKST(new Date());
+};
+
+// Cache the latest date for demo mode
+const DEMO_REFERENCE_DATE = getLatestDateFromSampleData();
+
 /**
  * 가격을 "X억 X,XXX만원" 형식으로 포맷팅
  * @param priceInManwon - 만원 단위 가격
@@ -58,8 +71,9 @@ export function formatDateKST(date: Date | string | number): string {
 }
 
 /**
- * 현재 시간의 KST 기준 "YYYY-MM-DD" 문자열 반환
+ * Demo mode: 샘플 데이터의 가장 최근 날짜를 KST 기준 "YYYY-MM-DD" 문자열로 반환
+ * (실제 "오늘"이 아니라 샘플 데이터 기준 최신 날짜)
  */
 export function getTodayKST(): string {
-  return formatDateKST(new Date());
+  return DEMO_REFERENCE_DATE;
 }

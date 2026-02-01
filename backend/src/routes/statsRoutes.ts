@@ -185,6 +185,27 @@ router.get("/trend", async (req, res) => {
   }
 });
 
+// Get the latest scraped date in the database
+router.get("/latest-date", async (req, res) => {
+  try {
+    const result = await prisma.$queryRaw<any[]>`
+      SELECT MAX(date(scrapedAt / 1000, 'unixepoch', '+9 hours')) as latestDate
+      FROM listings
+    `;
+
+    const latestDate = result[0]?.latestDate;
+
+    if (!latestDate) {
+      return res.status(404).json({ error: "No data found" });
+    }
+
+    res.json({ latestDate });
+  } catch (error) {
+    console.error("Latest date fetch error:", error);
+    res.status(500).json({ error: "Failed to fetch latest date" });
+  }
+});
+
 // Get new high/low price records (individual listings)
 router.get("/records", async (req, res) => {
   try {

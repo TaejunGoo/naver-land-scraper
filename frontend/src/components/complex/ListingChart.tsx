@@ -125,7 +125,9 @@ export function ListingChart({
   areaOptions,
 }: ListingChartProps) {
   const [chartStartDate, setChartStartDate] = useState<string>(() => {
-    const d = new Date();
+    // Demo mode: Use sample data's latest date as reference
+    const endDateStr = getTodayKST();
+    const d = new Date(endDateStr);
     d.setDate(d.getDate() - 7);
     return formatDateKST(d);
   });
@@ -263,17 +265,19 @@ export function ListingChart({
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      const end = new Date();
-                      const start = new Date();
+                      // Demo mode: Use sample data's latest date as reference
+                      const endDateStr = getTodayKST();
+                      const end = new Date(endDateStr);
+                      const start = new Date(end);
                       start.setDate(end.getDate() - value);
-                      setChartEndDate(formatDateKST(end));
+                      setChartEndDate(endDateStr);
                       setChartStartDate(formatDateKST(start));
                     }}
                     className={`h-7 px-2.5 text-xs ${
                       chartStartDate ===
                       formatDateKST(
                         new Date(
-                          new Date().setDate(new Date().getDate() - value)
+                          new Date(getTodayKST()).setDate(new Date(getTodayKST()).getDate() - value)
                         )
                       )
                         ? "bg-background shadow-sm font-bold"

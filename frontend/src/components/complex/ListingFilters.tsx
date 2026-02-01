@@ -31,17 +31,21 @@ export function ListingFilters({
   handleAreaChange,
 }: ListingFiltersProps) {
   const getDaysRange = (days: number) => {
-    const end = new Date();
-    const start = new Date();
+    // Demo mode: Use sample data's latest date as reference
+    const endDateStr = getTodayKST();
+    const end = new Date(endDateStr);
+    const start = new Date(end);
     start.setDate(end.getDate() - days);
-    return { start: formatDateKST(start), end: formatDateKST(end) };
+    return { start: formatDateKST(start), end: endDateStr };
   };
 
   const getMonthsRange = (months: number) => {
-    const end = new Date();
-    const start = new Date();
+    // Demo mode: Use sample data's latest date as reference
+    const endDateStr = getTodayKST();
+    const end = new Date(endDateStr);
+    const start = new Date(end);
     start.setMonth(end.getMonth() - months);
-    return { start: formatDateKST(start), end: formatDateKST(end) };
+    return { start: formatDateKST(start), end: endDateStr };
   };
 
   const {
