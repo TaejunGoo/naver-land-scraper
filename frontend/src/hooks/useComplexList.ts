@@ -99,7 +99,16 @@ export function useComplexList() {
         try {
           await complexApi.scrapeInfo(newComplex.id);
           queryClient.invalidateQueries({ queryKey: ["complexes"] });
-          showAlert("등록 및 수집 완료", "단지 정보를 성공적으로 수집했습니다.");
+
+          // Scrape listings after complex info
+          try {
+            const scrapeResult = await complexApi.scrape(newComplex.id);
+            queryClient.invalidateQueries({ queryKey: ["complexes"] });
+            const count = scrapeResult.data?.count || 0;
+            showAlert("등록 및 수집 완료", `단지 정보 및 ${count}개 매물을 성공적으로 수집했습니다.`);
+          } catch {
+            showAlert("부분 수집 완료", "단지 정보는 수집되었으나 매물 수집에 실패했습니다.");
+          }
         } catch {
           showAlert("등록 성공", "단지는 등록되었으나 정보 수집에 실패했습니다.");
         }

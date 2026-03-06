@@ -59,7 +59,7 @@ export function ComplexForm({
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">단지명</label>
+            <label className="block text-sm font-medium mb-2">단지명 (필수)</label>
             <Input
               value={formData.name}
               onChange={(e) =>
@@ -70,19 +70,18 @@ export function ComplexForm({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">주소</label>
+            <label className="block text-sm font-medium mb-2">주소 (선택)</label>
             <Input
               value={formData.address}
               onChange={(e) =>
                 setFormData({ ...formData, address: e.target.value })
               }
               placeholder="예: 서울시 강남구"
-              required
             />
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">
-              네이버 단지 ID (선택)
+              네이버 단지 ID (필수)
             </label>
             <Input
               value={formData.naverComplexId}
@@ -90,7 +89,11 @@ export function ComplexForm({
                 setFormData({ ...formData, naverComplexId: e.target.value })
               }
               placeholder="예: 12345"
+              required
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              네이버 부동산 URL에서 확인: https://new.land.naver.com/complexes/<strong>26325</strong>?... 의 숫자 부분
+            </p>
           </div>
 
           <div>
