@@ -1,9 +1,31 @@
+/**
+ * @fileoverview 매물(Listing) API 라우트
+ *
+ * 매물 데이터의 조회, 삭제, 더미 데이터 생성을 처리합니다.
+ *
+ * - GET /:complexId           특정 단지의 매물 조회 (필터/정렬 + 신고가/저가 플래그)
+ * - DELETE /:id               단건 매물 삭제
+ * - POST /batch-delete        복수 매물 일괄 삭제
+ * - DELETE /complex/:cId/all  특정 단지의 전체 매물 삭제
+ * - POST /complex/:cId/generate-dummy  테스트용 더미 매물 데이터 생성
+ */
 import { Router } from 'express'
 import prisma from '../db.js'
 
 const router = Router()
 
-// Get listings by complex ID with filtering and sorting
+/**
+ * GET /:complexId - 특정 단지의 매물 목록 조회
+ *
+ * 지원하는 필터/정렬 파라미터:
+ * - tradetype: 거래유형 필터 (쉼표로 복수 선택 가능, 예: "매매,전세")
+ * - areaMin/areaMax: 면적 범위 필터
+ * - sortBy: 정렬 기준 (price, area, floor, scrapedAt)
+ * - sortOrder: asc/desc
+ *
+ * 추가로 각 매물에 신고가/신저가 플래그(isNewHigh, isNewLow)를 부여합니다.
+ * (30일간 동일 평형대 대비 가격 갱신 여부 판단)
+ */
 router.get('/:complexId', async (req, res) => {
   try {
     const { complexId } = req.params
@@ -135,7 +157,9 @@ router.get('/:complexId', async (req, res) => {
   }
 })
 
-// Delete single listing
+/**
+ * DELETE /:id - 단건 매물 삭제
+ */
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params
@@ -149,7 +173,11 @@ router.delete('/:id', async (req, res) => {
   }
 })
 
-// Delete multiple listings
+/**
+ * POST /batch-delete - 복수 매물 일괄 삭제
+ *
+ * body: { ids: number[] } - 삭제할 매물 ID 배열
+ */
 router.post('/batch-delete', async (req, res) => {
   try {
     const { ids } = req.body
@@ -173,7 +201,12 @@ router.post('/batch-delete', async (req, res) => {
   }
 })
 
-// Delete all listings for a complex
+/**
+ * DELETE /complex/:complexId/all - 특정 단지의 전체 매물 삭제
+ *
+ * 해당 단지에 속한 모든 매물 이력을 완전히 삭제합니다.
+ * 단지 자체는 유지됩니다.
+ */
 router.delete('/complex/:complexId/all', async (req, res) => {
   try {
     const { complexId } = req.params
@@ -191,7 +224,15 @@ router.delete('/complex/:complexId/all', async (req, res) => {
   }
 })
 
-// Generate dummy data for testing
+/**
+ * POST /complex/:complexId/generate-dummy - 테스트용 더미 매물 데이터 생성
+ *
+ * 기존 단지에 과거 N일간의 더미 매물 데이터를 추가합니다.
+ * 가격은 단지의 areaOptions 기반으로 현실적으로 생성되며,
+ * 시간에 따른 가격 트렌드도 포함됩니다.
+ *
+ * body: { days?: number } (기본 365일)
+ */
 router.post('/complex/:complexId/generate-dummy', async (req, res) => {
   try {
     const { complexId } = req.params

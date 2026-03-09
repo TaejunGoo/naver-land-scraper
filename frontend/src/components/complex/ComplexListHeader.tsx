@@ -1,3 +1,9 @@
+/**
+ * @fileoverview 대시보드 상단 헤더 버튼 바
+ *
+ * 단지 추가, 전체 매물 갱신, 엑셀 내보내기, 테스트 단지 생성,
+ * 추세 분석 링크, 정렬 선택 UI를 포함하는 앱바 컴포넌트입니다.
+ */
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Beaker, RefreshCw, Plus, ArrowUpDown, Download, TrendingUp } from "lucide-react";

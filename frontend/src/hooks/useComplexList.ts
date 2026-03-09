@@ -1,3 +1,17 @@
+/**
+ * @fileoverview 대시보드(단지 목록) 페이지 비즈니스 로직 훅
+ *
+ * ComplexList 페이지의 모든 상태와 로직을 분리한 커스텀 훅입니다.
+ * UI 컴포넌트는 이 훅에서 반환하는 상태와 핸들러만 사용하며,
+ * 비즈니스 로직을 몰라도 됩니다.
+ *
+ * 주요 기능:
+ * - 단지 목록 조회 및 정렬 (이름/매물수/월세·전세수 기준)
+ * - 단지 생성/수정/삭제 (form 상태 관리 포함)
+ * - 전체 단지 매물 일괄 수집
+ * - 엑셀 내보내기
+ * - 테스트 단지 생성 (더미 데이터)
+ */
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -6,6 +20,10 @@ import { useAlertStore, useHeaderStore } from "@/lib/store";
 import { downloadBlob } from "@/lib/utils";
 import { SUBWAY_LINES } from "@/lib/constants";
 
+/**
+ * 단지 추가/수정 폼의 상태 타입.
+ * ComplexForm 컴포넌트의 입력 필드와 1:1 대응됩니다.
+ */
 export interface ComplexFormData {
   name: string;
   address: string;
@@ -14,6 +32,10 @@ export interface ComplexFormData {
   subwayLines: string[];
 }
 
+/**
+ * 폼 상태 초기값.
+ * 단지 추가 시 또는 수정 취소 시 이 값으로 리셋됩니다.
+ */
 const initialFormData: ComplexFormData = {
   name: "",
   address: "",
@@ -22,6 +44,17 @@ const initialFormData: ComplexFormData = {
   subwayLines: [],
 };
 
+/**
+ * 대시보드 페이지의 전체 비즈니스 로직을 제공하는 커스텀 훅.
+ *
+ * 반환값:
+ * - 폼 상태: showForm, editingId, formData, setFormData
+ * - 데이터: complexes, sortedComplexes, isLoading
+ * - 정렬: sortBy, setSortBy, sortOrder, setSortOrder
+ * - 액션: resetForm, handleEdit, handleSubmit, handleDeleteComplex
+ * - 뮤테이션: createMutation, updateMutation, scrapeAllMutation,
+ *              exportExcelMutation, createTestComplexMutation
+ */
 export function useComplexList() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);

@@ -1,3 +1,16 @@
+/**
+ * @fileoverview 단지 상세 정보 패널 컴포넌트
+ *
+ * ComplexDetail 페이지 좌측의 단지 정보 패널입니다.
+ * 인라인 수정/삭제 기능을 포함하며, 다음 정보를 표시합니다:
+ *
+ * - 단지명, 주소, 유형, 세대수, 동수
+ * - 사용승인일, 최종 수집일, 지하철 태그
+ * - 현재 매물 수 (매매/전세/월세)
+ * - 사용자 메모 (커스텀 노트)
+ *
+ * 수정 모드 전환 시 각 필드가 인풋으로 변경뤩니다.
+ */
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";

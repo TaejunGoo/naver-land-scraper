@@ -1,3 +1,14 @@
+/**
+ * @fileoverview 대시보드 요약 통계 카드 컴포넌트
+ *
+ * 대시보드와 트렌드 페이지 상단에 표시되는 4개의 요약 카드입니다:
+ * 1. 전일 대비 매물 증감 (+N/-N건)
+ * 2. 주간 시세 변동 (평당가 변동률 %)
+ * 3. 신고가 매물 (30일 대비, 클릭 시 Records 페이지로 이동)
+ * 4. 신저가 매물 (30일 대비, 클릭 시 Records 페이지로 이동)
+ *
+ * 데이터: GET /api/stats/trend의 summary 응답 사용
+ */
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { statsApi } from "@/lib/api";

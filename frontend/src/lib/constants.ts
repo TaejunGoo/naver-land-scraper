@@ -1,3 +1,12 @@
+/**
+ * @fileoverview 상수 정의
+ *
+ * 애플리케이션 전체에서 사용되는 상수를 정의합니다.
+ * - SUBWAY_LINES: 지하철 노선 목록 (단지 추가/수정 폼의 체크박스에 사용)
+ * - getTagColor: 태그명에 따른 노선 색상 배지 클래스 반환
+ */
+
+/** 서울 수도권 지하철 노선 목록 (단지 태그 입력 UI에서 체크박스로 표시) */
 export const SUBWAY_LINES = [
   "1호선",
   "2호선",
@@ -15,6 +24,14 @@ export const SUBWAY_LINES = [
   "GTX-A",
 ];
 
+/**
+ * 태그명에 해당하는 지하철 노선 색상의 Tailwind CSS 클래스를 반환합니다.
+ * 각 색상은 서울교통공사의 공식 노선 색상 코드를 사용합니다.
+ * ComplexCard 및 ComplexInfo의 태그 배지에 적용됩니다.
+ *
+ * @param tag - 태그 문자열 (예: "신분당선", "2호선")
+ * @returns Tailwind CSS 배경색 클래스 (예: "bg-[#00A84D] hover:bg-[#00A84D]/90")
+ */
 export const getTagColor = (tag: string) => {
   if (tag.includes("1호선")) return "bg-[#0052A4] hover:bg-[#0052A4]/90";
   if (tag.includes("2호선")) return "bg-[#00A84D] hover:bg-[#00A84D]/90";

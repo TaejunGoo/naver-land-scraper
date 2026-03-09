@@ -1,3 +1,15 @@
+/**
+ * @fileoverview 신고가/신저가 매물 목록 페이지
+ *
+ * 매매 기준 최근 30일간 단지/평형대별 가격이 갱신된 매물을
+ * 테이블로 표시합니다.
+ *
+ * URL의 type 파라미터로 신고가(high)/신저가(low)를 구분합니다:
+ * - /records?type=high → 30일 대비 최고가 갱신 매물 (빨간색 테마)
+ * - /records?type=low  → 30일 대비 최저가 갱신 매물 (파란색 테마)
+ *
+ * 데이터: GET /api/stats/records?type=high|low
+ */
 import { useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";

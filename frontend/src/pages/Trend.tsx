@@ -1,3 +1,17 @@
+/**
+ * @fileoverview 전체 추세 분석 페이지
+ *
+ * 모든 단지의 매물 데이터를 집계하여 시장 트렌드를 시각화합니다.
+ *
+ * 페이지 구성:
+ * - 기간 선택 탭 (7일 / 30일 / 90일)
+ * - DashboardSummary: 요약 통계 카드
+ * - 평균 평당가 라인차트 (Recharts LineChart)
+ * - 유형별 매물 수 바차트 (Recharts BarChart, 매매/전세/월세 스택)
+ * - 일자별 데이터 테이블
+ *
+ * 데이터: GET /api/stats/trend?days=N
+ */
 import { useEffect, useState } from "react";
 import { statsApi } from "@/lib/api";
 import { TrendData } from "@/types";

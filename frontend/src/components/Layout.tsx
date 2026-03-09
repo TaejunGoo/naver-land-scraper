@@ -1,3 +1,16 @@
+/**
+ * @fileoverview 공통 레이아웃 컴포넌트
+ *
+ * 모든 페이지에 공통으로 적용되는 헤더 및 네비게이션 레이아웃입니다.
+ *
+ * 헤더 구성:
+ * - 좌측: 로고("랜드브리핑") 또는 뒤로가기 버튼 (showBackButton에 따라 전환)
+ * - 중앙: 페이지 제목 (useHeaderStore에서 동적으로 설정)
+ * - 우측: 액션 버튼들 (useHeaderStore에서 페이지별로 설정)
+ *
+ * 각 페이지는 useEffect에서 setHeader()/resetHeader()를 호출하여
+ * 헤더의 제목과 액션 버튼을 동적으로 변경합니다.
+ */
 import { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Building2, ChevronLeft } from 'lucide-react'

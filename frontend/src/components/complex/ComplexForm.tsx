@@ -1,3 +1,10 @@
+/**
+ * @fileoverview 단지 추가/수정 폼 컴포넌트
+ *
+ * 단지명, 주소, 네이버 ID, 지하철 호선, 태그를 입력할 수 있는 폼입니다.
+ * editingId 유무에 따라 "새 단지 추가" 또는 "단지 정보 수정" 모드로 전환됩니다.
+ * 수정 모드에서는 삭제 버튼이 추가로 표시됩니다.
+ */
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

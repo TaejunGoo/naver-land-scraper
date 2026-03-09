@@ -1,3 +1,16 @@
+/**
+ * @fileoverview 단지 상세 페이지
+ *
+ * 특정 단지의 상세 정보와 매물 데이터를 표시하는 페이지입니다.
+ *
+ * 페이지 구성 (2칸 레이아웃):
+ * - 좌측: ComplexInfo (단지 상세 정보 패널, 인라인 수정/삭제)
+ * - 우측: ListingChart (시세 시계열 차트, 면적별 필터)
+ * - 하단: ListingFilters + ListingTable (매물 필터링 및 목록 테이블)
+ *
+ * 헤더에 버튼: 네이버 부동산 이동, 엑셀 저장, 정보 갱신, 매물 갱신
+ * 비즈니스 로직은 useComplexDetail 훅에 완전히 분리되어 있습니다.
+ */
 import { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ExternalLink, RefreshCw, Info, Download } from "lucide-react";

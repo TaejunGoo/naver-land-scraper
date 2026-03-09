@@ -1,3 +1,16 @@
+/**
+ * @fileoverview 시세 시계열 차트 컴포넌트
+ *
+ * 단지 상세 페이지 우측의 가격 추이 차트 영역입니다.
+ * Recharts ComposedChart를 사용하여 다음을 표시합니다:
+ * - 가격 밴드 (라인: 최고가/중간값/최저가, Area: 가격 범위)
+ * - 매물 수 바 차트 (우측 Y축)
+ *
+ * 필터:
+ * - 거래유형 선택 (매매/전세/월세)
+ * - 조회 기간 (프리셋 + 카스텀 날짜 입력)
+ * - 전용면적 선택 (배지 토글)
+ */
 import { useState, useMemo } from "react";
 import { BarChart3, TrendingUp } from "lucide-react";
 import { formatPrice, formatDateKST, getTodayKST } from "@/lib/format";

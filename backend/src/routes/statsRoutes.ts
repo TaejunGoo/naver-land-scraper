@@ -1,9 +1,37 @@
+/**
+ * @fileoverview 통계(Stats) API 라우트
+ *
+ * 대시보드와 트렌드 페이지에서 사용하는 통계 데이터를 제공합니다.
+ *
+ * - GET /trend    전체 시장 트렌드 (일별 매물 수, 평당가, 요약 통계)
+ * - GET /records   신고가/신저가 매물 상세 목록
+ *
+ * 모든 통계는 KST(UTC+9) 기준으로 계산되며,
+ * "최근 수집일"을 기준점으로 사용합니다 (오늘이 아닐 수 있음).
+ */
 import { Router } from "express";
 import prisma from "../db.js";
 
 const router = Router();
 
-// Get overall trend data for the dashboard and trend page
+/**
+ * GET /trend - 전체 시장 트렌드 데이터 조회
+ *
+ * days 파라미터로 조회 기간을 설정합니다 (기본 30일).
+ *
+ * 반환 데이터:
+ * - history[]: 일별 매물 수(유형별) 및 평균 평당가
+ * - summary: 요약 통계
+ *   - todayTotal: 최근 수집일 총 매물 수
+ *   - todayAvgPricePerPyeong: 평균 평당가 (만원)
+ *   - priceChange: 7일 전 대비 가격 변동률 (%)
+ *   - countChange: 직전 수집일 대비 매물 수 증감
+ *   - newCount: 순수 신규 매물 수 (기존 단지 기준 증가분)
+ *   - avgPrice84: 국평(84㎡) 평균가
+ *   - newLowCount/newHighCount: 30일 대비 신고가/저가 매물 수
+ *
+ * 족 6개의 복잡한 SQL 쿼리를 실행하여 데이터를 집계합니다.
+ */
 router.get("/trend", async (req, res) => {
   try {
     const days = Number(req.query.days) || 30; // Default to 30 days
@@ -185,7 +213,19 @@ router.get("/trend", async (req, res) => {
   }
 });
 
-// Get new high/low price records (individual listings)
+/**
+ * GET /records - 신고가/신저가 매물 상세 목록 조회
+ *
+ * query: { type: 'high' | 'low' }
+ *
+ * 매매 기준으로, 최근 30일간 동일 단지/평형대의
+ * 최고가/최저가 대비 가격이 갱신된 매물 목록을 반환합니다.
+ *
+ * 반환 필드:
+ * - id, complexId, complexName: 매물/단지 식별 정보
+ * - price, area, floor: 매물 상세
+ * - pyeong, pricePerPyeong: 평형 및 평당가
+ */
 router.get("/records", async (req, res) => {
   try {
     const { type } = req.query;

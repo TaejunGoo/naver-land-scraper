@@ -1,3 +1,17 @@
+/**
+ * @fileoverview 대시보드 (단지 목록) 페이지
+ *
+ * 앱의 메인 화면으로, 등록된 단지들을 카드 그리드로 표시합니다.
+ *
+ * 페이지 구성:
+ * - DashboardSummary: 요약 통계 (총 매물/평당가/신고가·저가)
+ * - ComplexListHeader: 상단 버튼 바 (단지 추가/전체 수집/엑셀/정렬)
+ * - ComplexForm: 단지 추가/수정 폼 (조건부 표시)
+ * - ComplexCard 그리드: 단지 정보 카드 (세대수/연차/매물수/증감)
+ * - DataManagementSection: DB 백업/복구 UI
+ *
+ * 비즈니스 로직은 useComplexList 훅에 완전히 분리되어 있습니다.
+ */
 import { useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ComplexListHeader } from "@/components/complex/ComplexListHeader";

@@ -1,3 +1,13 @@
+/**
+ * @fileoverview 데이터베이스 백업/복구 API 라우트
+ *
+ * SQLite 데이터베이스 파일(dev.db)의 다운로드 및 업로드를 처리합니다.
+ *
+ * - GET /download: DB 파일을 .db 파일로 다운로드 (백업)
+ * - POST /upload: .db 파일을 업로드하여 기존 DB 교체 (복구)
+ *   - 업로드 시 SQLite 헤더("SQLite format 3") 검증을 수행하여
+ *     잘못된 파일이 DB를 덮어쓰는 것을 방지합니다.
+ */
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -20,7 +30,10 @@ if (!fs.existsSync(uploadDir)) {
 const upload = multer({ dest: 'uploads/' });
 
 /**
- * DB 백업 다운로드
+ * GET /download - 현재 DB 파일을 다운로드 (백업)
+ *
+ * SQLite DB 파일을 그대로 다운로드합니다.
+ * 파일명: LandBriefing_Backup_YYYY-MM-DD.db
  */
 router.get('/download', (req, res) => {
   if (!fs.existsSync(dbPath)) {
@@ -34,7 +47,15 @@ router.get('/download', (req, res) => {
 });
 
 /**
- * DB 복구 (업로드)
+ * POST /upload - DB 파일을 업로드하여 복구
+ *
+ * 동작 흐름:
+ * 1. multer로 파일을 임시 저장
+ * 2. 파일의 처음 16바이트를 읽어 SQLite 매직 넘버("SQLite format 3\0") 검증
+ * 3. 검증 통과 시 기존 dev.db에 덮어쓰기
+ * 4. 임시 파일 삭제
+ *
+ * 유효하지 않은 파일이면 400 오류를 반환하고 임시 파일을 삭제합니다.
  */
 router.post('/upload', upload.single('file'), (req, res) => {
   if (!req.file) {

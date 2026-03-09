@@ -1,3 +1,14 @@
+/**
+ * @fileoverview 매물 목록 테이블 컴포넌트
+ *
+ * 단지 상세 페이지의 매물 데이터 테이블입니다.
+ * 주요 기능:
+ * - 컸럼 헤더 클릭으로 정렬 (유형/가격/평당가/면적/층/수집일)
+ * - 체크박스로 복수 선택 후 일괄 삭제
+ * - 전체 삭제 (해당 단지 매물 전체)
+ * - 신고가(빨간색)/신저가(파란색) 행 하이라이트
+ * - 레이지 로딩 (50개씩 점진적 표시, 전체 로드 버튼)
+ */
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { listingApi } from '@/lib/api'

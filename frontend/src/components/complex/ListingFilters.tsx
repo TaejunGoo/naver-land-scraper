@@ -1,3 +1,12 @@
+/**
+ * @fileoverview 매물 필터 UI 컴포넌트
+ *
+ * 단지 상세 페이지의 매물 목록 상단 필터 영역입니다.
+ * 세 가지 필터를 제공합니다:
+ * - 조회 기간: 프리셋 버튼(오늘/1주일/1개월/3개월) + 카스텀 날짜
+ * - 거래 유형: 매매/전세/월세 토글
+ * - 전용면적: m²별 선택 버튼
+ */
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";

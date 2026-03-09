@@ -1,3 +1,17 @@
+/**
+ * @fileoverview 단지 카드 컴포넌트
+ *
+ * 대시보드의 그리드에 표시되는 개별 단지 카드입니다.
+ * memo로 래핑되어 성능에 최적화되어 있습니다.
+ *
+ * 표시 정보:
+ * - 단지명, 주소, 지하철/태그 배지
+ * - 세대수, 연차 (사용승인일 기준 계산)
+ * - 수집 일수, 오늘 매물 수
+ * - 유형별 증감 (▲/▼ 표시)
+ * - 신고가/저가 매물 수
+ * - 네이버 부동산 외부 링크, 편집 버튼
+ */
 import { memo, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Pencil } from "lucide-react";

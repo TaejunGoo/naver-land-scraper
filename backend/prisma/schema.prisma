@@ -1,3 +1,7 @@
+// ─── Prisma 데이터베이스 스키마 ──────────────────────────────────
+// 이 파일은 SQLite 데이터베이스의 테이블 구조를 정의합니다.
+// 수정 후 반드시 `npx prisma migrate dev` 실행이 필요합니다.
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,41 +11,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Complex: 아파트 단지 정보 ──────────────────────────────────
+// 사용자가 관심 등록한 아파트 단지의 기본 정보를 저장합니다.
+// 네이버 부동산 단지 ID를 기반으로 크롤링 대상을 식별합니다.
 model Complex {
-  id             Int       @id @default(autoincrement())
-  name           String
-  address        String
-  naverComplexId String?
-  customNotes    String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  lastScrapedAt  DateTime?
-  approvalDate   String?
-  areaOptions    String?
-  buildings      Int?
-  infoScrapedAt  DateTime?
-  type           String?
-  units          Int?
-  year           Int?
-  tags           String?
-  listings       Listing[]
+  id             Int       @id @default(autoincrement()) // 고유 ID (자동 증가)
+  name           String    // 단지명 (예: "래미안강남")
+  address        String    // 주소 (예: "서울시 강남구 개포동")
+  naverComplexId String?   // 네이버 부동산 고유 ID (크롤링 키, URL에 사용)
+  customNotes    String?   // 사용자 자유 메모
+  createdAt      DateTime  @default(now())  // 레코드 생성 일시
+  updatedAt      DateTime  @updatedAt       // 레코드 수정 일시 (자동 갱신)
+  lastScrapedAt  DateTime? // 최종 매물 수집 일시
+  approvalDate   String?   // 사용승인일 (예: "2020.01")
+  areaOptions    String?   // 면적 옵션 목록 (JSON 배열 문자열)
+  buildings      Int?      // 총 동수
+  infoScrapedAt  DateTime? // 최종 단지 정보 수집 일시
+  type           String?   // 유형 (아파트, 분양권 등)
+  units          Int?      // 총 세대수
+  year           Int?      // 준공년도 (YYYY)
+  tags           String?   // 지하철 호선 및 기타 태그 (JSON 배열 문자열)
+  listings       Listing[] // 이 단지에 속한 매물 목록 (1:N 관계)
 
-  @@map("complexes")
+  @@map("complexes") // 실제 DB 테이블명
 }
 
+// ─── Listing: 매물(매물 시세) 정보 ─────────────────────────────
+// 네이버 부동산에서 크롤링한 개별 매물 데이터를 저장합니다.
+// 동일한 매물이라도 수집 시점마다 새 행으로 저장하여 시계열 분석이 가능합니다.
 model Listing {
-  id         Int      @id @default(autoincrement())
-  complexId  Int
-  price      Int
-  area       Float
-  supplyArea Float?
-  floor      String
-  direction  String?
-  tradetype  String
-  memo       String?
-  url        String?
-  scrapedAt  DateTime @default(now())
+  id         Int      @id @default(autoincrement()) // 고유 ID (자동 증가)
+  complexId  Int      // 소속 단지 ID (Complex.id 외래키)
+  price      Int      // 가격 (만원 단위, 월세의 경우 월세 금액)
+  area       Float    // 전용면적 (m², 예: 84.95)
+  supplyArea Float?   // 공급면적 (m², 예: 114.67)
+  floor      String   // 층 정보 (예: "15", "고")
+  direction  String?  // 향 (남향, 동향 등)
+  tradetype  String   // 거래유형: "매매" | "전세" | "월세"
+  memo       String?  // 매물 설명/특이사항
+  url        String?  // 네이버 부동산 매물 상세 링크
+  scrapedAt  DateTime @default(now()) // 수집 일시
   complex    Complex  @relation(fields: [complexId], references: [id], onDelete: Cascade)
+  // ↑ Complex 삭제 시 해당 단지의 모든 매물도 함께 삭제 (CASCADE)
 
-  @@map("listings")
+  @@map("listings") // 실제 DB 테이블명
 }

@@ -1,10 +1,36 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { complexApi, listingApi, type Listing } from "@/lib/api";
-import { formatDateKST, getTodayKST } from "@/lib/format";
+/**
+ * @fileoverview 단지 상세 페이지 비즈니스 로직 훅
+ *
+ * ComplexDetail 페이지의 모든 데이터 조회, 필터링, 정렬,
+ * 스크래핑 로직을 분리한 커스텀 훅입니다.
+ *
+ * 주요 기능:
+ * - 단지 상세 정보 조회 (React Query)
+ * - 매물 목록 조회 및 클라이언트 측 필터링 (거래유형/날짜/면적)
+ * - 매물 정렬 (\u 여러 기준)
+ * - 매물 수집 (scrape) 및 정보 갱신 (scrape-info)
+ * - 엑셀 내보내기
+ * - 면적 옵션 추출 및 필터
+ */
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { complexApi, listingApi, type Listing } from '../lib/api'
+import { formatDateKST, getTodayKST } from '../lib/format';
 import { useAlertStore } from "@/lib/store";
 import { downloadBlob } from "@/lib/utils";
 
+/**
+ * 단지 상세 페이지의 전체 비즈니스 로직을 제공하는 커스텀 훅.
+ *
+ * @param id - URL 파라미터에서 추출한 단지 ID (문자열)
+ *
+ * 반환값:
+ * - 데이터: complex, listings, allListings, areaOptions
+ * - 로딩: complexLoading, listingsLoading
+ * - 필터: selectedTradeTypes, tableStartDate, tableEndDate, selectedAreas
+ * - 액션: handleScrape, handleScrapeInfo, handleExportExcel, handleSort, handleAreaChange
+ * - 통계: currentListingCounts
+ */
 export function useComplexDetail(id: string | undefined) {
   const queryClient = useQueryClient();
   const { showAlert } = useAlertStore();

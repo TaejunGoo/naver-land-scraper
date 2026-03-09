@@ -1,3 +1,30 @@
+/**
+ * @fileoverview 단지(Complex) API 라우트
+ *
+ * 아파트 단지 관련 모든 CRUD 작업과 스크래핑, 통계를 처리합니다.
+ * 이 파일은 프로젝트에서 가장 큰 라우트 파일로, 다음 기능을 포함합니다:
+ *
+ * [조회]
+ * - GET /          전체 단지 목록 (매물 수, 증감, 신고가/저가 포함)
+ * - GET /:id       단지 상세 정보 (매물 통계 포함)
+ *
+ * [엑셀 내보내기]
+ * - GET /export/excel      전체 단지 + 매물 엑셀 다운로드
+ * - GET /:id/export/excel  특정 단지 매물 엑셀 다운로드
+ *
+ * [CRUD]
+ * - POST /         새 단지 등록
+ * - PUT /:id       단지 정보 수정
+ * - DELETE /:id    단지 삭제
+ *
+ * [스크래핑]
+ * - POST /:id/scrape       특정 단지 매물 수집
+ * - POST /:id/scrape-info  특정 단지 메타데이터(세대수 등) 수집
+ * - POST /scrape-all/listings  전체 단지 일괄 매물 수집
+ *
+ * [테스트]
+ * - POST /create-test-complex  더미 데이터 포함 테스트 단지 생성
+ */
 import { Router } from "express";
 import ExcelJS from "exceljs";
 import prisma from "../db.js";
@@ -16,7 +43,18 @@ import {
 
 const router = Router();
 
-// Get all complexes
+/**
+ * GET / - 전체 단지 목록 조회
+ *
+ * 모든 등록된 단지를 반환하며, 각 단지에 다음 추가 데이터를 포함합니다:
+ * - todayListingCounts: 최근 수집일 기준 유형별(매매/전세/월세) 매물 수
+ * - listingStats: 직전 수집일 대비 증감 정보
+ * - dataDaysCount: 전체 데이터 수집 일수
+ * - recordCounts: 30일 대비 신고가/신저가 매물 수
+ *
+ * ※ "최근 수집일"과 "직전 수집일"은 해당 단지의 실제 수집 이력 기준이며,
+ *   반드시 오늘/어제가 아닐 수 있습니다.
+ */
 router.get("/", async (req, res) => {
   try {
     const complexes = await prisma.complex.findMany({
@@ -153,7 +191,13 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Export all complexes to Excel
+/**
+ * GET /export/excel - 전체 단지 + 매물 데이터를 엑셀로 내보내기
+ *
+ * 두 개의 시트를 포함하는 .xlsx 파일을 생성합니다:
+ * - 시트 1 "전체 단지 목록": 단지 기본 정보 + 오늘 매물 수 요약
+ * - 시트 2 "전체 매물 통합": 모든 단지의 모든 매물 원본 데이터
+ */
 router.get("/export/excel", async (req, res) => {
   try {
     const complexes = await prisma.complex.findMany({
@@ -304,7 +348,14 @@ router.get("/export/excel", async (req, res) => {
   }
 });
 
-// Get complex by ID
+/**
+ * GET /:id - 특정 단지 상세 정보 조회
+ *
+ * 단지 기본 정보에 더해 다음 데이터를 추가로 계산하여 반환합니다:
+ * - dataDaysCount: 총 데이터 수집 일수 (KST 기준)
+ * - todayListingCounts: 최근/직전 수집일 기준 매물 수 및 증감
+ * - listingStats: 유형별 매물 통계 (today, yesterday, diff)
+ */
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -380,7 +431,11 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// Export specific complex listings to Excel
+/**
+ * GET /:id/export/excel - 특정 단지의 매물 데이터를 엑셀로 내보내기
+ *
+ * 해당 단지의 기본 정보 요약 + 전체 매물 목록을 .xlsx 파일로 생성합니다.
+ */
 router.get("/:id/export/excel", async (req, res) => {
   try {
     const { id } = req.params;
@@ -467,7 +522,12 @@ router.get("/:id/export/excel", async (req, res) => {
   }
 });
 
-// Create complex
+/**
+ * POST / - 새 단지 등록
+ *
+ * body: { name, address, naverComplexId?, customNotes?, tags? }
+ * tags는 배열로 받아 JSON 문자열로 저장합니다.
+ */
 router.post("/", async (req, res) => {
   try {
     const { name, address, naverComplexId, customNotes, tags } = req.body;
@@ -488,7 +548,11 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Update complex
+/**
+ * PUT /:id - 단지 정보 수정
+ *
+ * body: { name, address, naverComplexId?, customNotes?, tags? }
+ */
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -511,7 +575,11 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// Delete complex
+/**
+ * DELETE /:id - 단지 삭제
+ *
+ * CASCADE 설정에 의해 해당 단지의 모든 매물 데이터도 함께 삭제됩니다.
+ */
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -524,7 +592,17 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// Scrape listings for complex
+/**
+ * POST /:id/scrape - 특정 단지의 매물 수집 실행
+ *
+ * 동작 흐름:
+ * 1. 해당 단지의 당일(KST) 기존 매물 데이터를 삭제 (덮어쓰기 방식)
+ * 2. Puppeteer로 네이버 부동산에서 매물 목록 크롤링
+ * 3. 수집된 매물을 DB에 일괄 저장 (createMany)
+ * 4. 단지의 lastScrapedAt 갱신
+ *
+ * 같은 날 여러 번 실행해도 최신 결과만 유지됩니다.
+ */
 router.post("/:id/scrape", async (req, res) => {
   try {
     const { id } = req.params;
@@ -590,7 +668,12 @@ router.post("/:id/scrape", async (req, res) => {
   }
 });
 
-// Scrape complex info
+/**
+ * POST /:id/scrape-info - 단지 메타데이터(세대수, 준공년도 등) 수집
+ *
+ * 네이버 부동산 단지 상세 페이지에서 다음 정보를 크롤링하여 DB에 업데이트합니다:
+ * - 유형, 세대수, 동수, 준공년도, 사용승인일, 면적 옵션
+ */
 router.post("/:id/scrape-info", async (req, res) => {
   try {
     const { id } = req.params;
@@ -631,7 +714,16 @@ router.post("/:id/scrape-info", async (req, res) => {
   }
 });
 
-// Scrape all complexes' listings
+/**
+ * POST /scrape-all/listings - 전체 단지 일괄 매물 수집
+ *
+ * naverComplexId가 등록된 모든 단지에 대해 매물을 수집합니다.
+ * 로컬 환경 부하를 고려하여 2개씩 병렬(CONCURRENCY=2) 처리합니다.
+ *
+ * 응답에 전체 결과 요약이 포함됩니다:
+ * - 총 단지 수, 성공 수, 총 매물 수, 소요 시간
+ * - 각 단지별 수집 결과 (성공/실패, 매물 수, 소요 시간)
+ */
 router.post("/scrape-all/listings", async (req, res) => {
   const globalStartTime = Date.now();
   try {
@@ -751,7 +843,13 @@ router.post("/scrape-all/listings", async (req, res) => {
   }
 });
 
-// Create test complex with dummy data
+/**
+ * POST /create-test-complex - 더미 데이터 포함 테스트 단지 생성
+ *
+ * 그래프/차트 테스트를 위해 과거 N일간의 현실적인 가격 데이터를
+ * 가진 테스트용 아파트 단지를 생성합니다.
+ * body: { days?: number } (기본 365일)
+ */
 router.post("/create-test-complex", async (req, res) => {
   try {
     const { days = 365 } = req.body;

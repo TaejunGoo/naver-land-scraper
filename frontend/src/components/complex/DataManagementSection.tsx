@@ -1,3 +1,11 @@
+/**
+ * @fileoverview 데이터 관리 (백업/복구) UI 섹션
+ *
+ * 대시보드 하단에 표시되는 DB 백업/복구 영역입니다.
+ * - 내보내기: .db 파일 다운로드 (/api/backups/download)
+ * - 불러오기: .db 파일 업로드 (/api/backups/upload)
+ *   복구 전 확인 대화상자를 표시하여 사고 방지
+ */
 import { Database, Download, Upload, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
