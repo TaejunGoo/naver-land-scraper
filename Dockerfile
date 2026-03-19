@@ -1,8 +1,9 @@
 # ─── Stage 1: Build ────────────────────────────────────────────
 FROM node:20-slim AS builder
 
-# Puppeteer가 빌드 중 Chromium을 다운로드하지 않도록 설정
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+# Puppeteer v21+: PUPPETEER_SKIP_DOWNLOAD 으로 Chromium 다운로드 완전 차단
+ENV PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 WORKDIR /app
 
@@ -15,7 +16,8 @@ RUN cd frontend && npm run build
 
 # 2. Install backend dependencies and build
 COPY backend/package*.json ./backend/
-RUN cd backend && npm ci
+# npm ci 실행 시에도 명시적으로 env var를 인라인으로 전달 (postinstall 스크립트 차단)
+RUN cd backend && PUPPETEER_SKIP_DOWNLOAD=true PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm ci --ignore-scripts=false
 
 COPY backend/ ./backend/
 RUN cd backend && npx prisma generate
