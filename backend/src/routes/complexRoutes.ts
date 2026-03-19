@@ -852,7 +852,8 @@ router.post("/scrape-all/listings", async (req, res) => {
  */
 router.post("/create-test-complex", async (req, res) => {
   try {
-    const { days = 365 } = req.body;
+    const rawDays = Number(req.body.days) || 365;
+    const days = Math.min(rawDays, 3650); // 최대 10년으로 제한
 
     // Create test complex
     const complex = await prisma.complex.create({

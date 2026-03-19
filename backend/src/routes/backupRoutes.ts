@@ -18,8 +18,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const router = express.Router();
-// DB path relative to this file (backend/src/routes/backupRoutes.ts)
-const dbPath = path.join(__dirname, '../../prisma/dev.db');
+// DB path: Railway 환경에서는 Volume 마운트 경로, 로컬에서는 기존 경로 사용
+const dbPath = process.env.DB_PATH || path.join(__dirname, '../../prisma/dev.db');
 
 // 디렉토리가 없으면 생성 (uploads)
 const uploadDir = path.join(__dirname, '../../uploads');

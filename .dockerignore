@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+*.db
+*.db-journal
+.env
+.env.local
+.vscode
+.idea
+*.log
+backups/
+uploads/

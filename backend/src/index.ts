@@ -15,10 +15,14 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { rateLimit } from 'express-rate-limit'
 import complexRoutes from './routes/complexRoutes.js'
 import listingRoutes from './routes/listingRoutes.js'
 import backupRoutes from './routes/backupRoutes.js'
 import statsRoutes from './routes/statsRoutes.js'
+import authRoutes from './routes/authRoutes.js'
+import cronRoutes from './routes/cronRoutes.js'
+import { authMiddleware } from './middleware/authMiddleware.js'
 import fs from 'fs'
 
 /** 환경변수 로드 (.env 파일에서 DATABASE_URL 등 설정) */
@@ -37,24 +41,38 @@ const PORT = process.env.PORT || 5050
 // ─── 미들웨어 설정 ───────────────────────────────────────────────
 /** CORS 허용: 프론트엔드 개발 서버(localhost:5888)에서의 API 호출 허용 */
 app.use(cors())
-/** JSON 요청 바디 파싱 */
-app.use(express.json())
+/** JSON 요청 바디 파싱 (최대 1MB로 제한 — 대용량 페이로드 공격 방지) */
+app.use(express.json({ limit: '1mb' }))
 
-// ─── API 라우트 등록 ──────────────────────────────────────────────
-/** 단지(Complex) CRUD, 매물 스크래핑, 엑셀 내보내기 등 */
-app.use('/api/complexes', complexRoutes)
-/** 매물(Listing) 조회, 삭제, 더미 데이터 생성 등 */
-app.use('/api/listings', listingRoutes)
-/** DB 백업 다운로드 및 복구 업로드 */
-app.use('/api/backups', backupRoutes)
-/** 시장 트렌드 통계 및 신고가/저가 조회 */
-app.use('/api/stats', statsRoutes)
+/** 로그인 엔드포인트 rate limit — IP당 15분에 최대 10회 */
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15분
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '너무 많은 로그인 시도입니다. 15분 후 다시 시도해주세요.' },
+})
 
-// ─── 헬스 체크 ────────────────────────────────────────────────────
+// ─── 공개 API 라우트 (인증 불필요) ─────────────────────────────────
+/** 로그인 — rate limit 적용 후 라우트 등록 */
+app.use('/api/auth/login', loginRateLimiter)
+app.use('/api/auth', authRoutes)
 /** 서버 정상 동작 확인 엔드포인트 */
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })
 })
+/** Railway Cron Job 자동 크롤링 (CRON_SECRET으로 자체 인증) */
+app.use('/api/cron', cronRoutes)
+
+// ─── 보호된 API 라우트 (JWT 인증 필요) ─────────────────────────────
+/** 단지(Complex) CRUD, 매물 스크래핑, 엑셀 내보내기 등 */
+app.use('/api/complexes', authMiddleware, complexRoutes)
+/** 매물(Listing) 조회, 삭제, 더미 데이터 생성 등 */
+app.use('/api/listings', authMiddleware, listingRoutes)
+/** DB 백업 다운로드 및 복구 업로드 */
+app.use('/api/backups', authMiddleware, backupRoutes)
+/** 시장 트렌드 통계 및 신고가/저가 조회 */
+app.use('/api/stats', authMiddleware, statsRoutes)
 
 // ─── 프론트엔드 정적 파일 서빙 ────────────────────────────────────
 /** 프로덕션 빌드된 React 앱(frontend/dist)을 정적 파일로 제공 */
@@ -76,11 +94,12 @@ app.get('*', (req, res) => {
  * 이 함수는 서버가 시작될 때마다 1회 실행되어, 데이터 손실을 방지합니다.
  */
 const backupDatabase = () => {
-  const dbPath = path.join(__dirname, '../prisma/dev.db');
-  const backupDir = path.join(__dirname, '../backups');
+  // Railway 환경에서는 Volume 마운트 경로 사용
+  const dbFile = process.env.DB_PATH || path.join(__dirname, '../prisma/dev.db');
+  const backupDir = path.join(path.dirname(dbFile), '../backups');
   const MAX_BACKUPS = 5; // 최대 보관 개수 설정
   
-  if (fs.existsSync(dbPath)) {
+  if (fs.existsSync(dbFile)) {
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir);
     }
@@ -88,7 +107,7 @@ const backupDatabase = () => {
     // 1. 새로운 백업 생성: ISO 형식 타임스탬프를 파일명에 포함
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const backupPath = path.join(backupDir, `dev_backup_${timestamp}.db`);
-    fs.copyFileSync(dbPath, backupPath);
+    fs.copyFileSync(dbFile, backupPath);
     console.log(`[Backup] Database backed up to: ${backupPath}`);
 
     // 2. 오래된 백업 파일 정리: 최신순 정렬 후 MAX_BACKUPS 초과분 삭제

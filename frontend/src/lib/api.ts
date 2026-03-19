@@ -25,6 +25,31 @@ const api = axios.create({
   },
 });
 
+// ─── JWT 토큰 자동 첨부 인터셉터 ─────────────────────────────────
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// ─── 401 응답 시 로그인 페이지로 리다이렉트 ───────────────────────
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // 로그인 API 자체의 401은 리다이렉트하지 않음
+      if (!error.config?.url?.includes('/auth/')) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_username');
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 /** 타입 재내보내기 (다른 모듈에서 api.ts를 통해 타입도 함께 가져갈 수 있도록) */
 export type { Complex, Listing, ComplexCreateInput, ComplexUpdateInput };
 

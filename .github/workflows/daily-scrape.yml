@@ -1,0 +1,16 @@
+name: Daily Scrape
+on:
+  schedule:
+    - cron: '0 0 * * *'  # UTC 00:00 = KST 09:00
+  workflow_dispatch:       # 수동 실행 버튼
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger scraping
+        run: |
+          curl -X POST ${{ secrets.RAILWAY_URL }}/api/cron/scrape-all \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --max-time 600

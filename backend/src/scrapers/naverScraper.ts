@@ -31,6 +31,8 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 const LAUNCH_OPTIONS = {
   headless: "new" as const,
+  // Docker 환경의 시스템 Chromium 사용 (CHROME_PATH가 설정된 경우)
+  ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}),
   args: [
     "--no-sandbox",
     "--disable-setuid-sandbox",
@@ -40,6 +42,7 @@ const LAUNCH_OPTIONS = {
     "--disable-gpu",
     "--no-first-run",
     "--no-zygote",
+    "--single-process",
   ],
   ignoreDefaultArgs: ["--enable-automation"],
 };
