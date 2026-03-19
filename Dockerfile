@@ -1,6 +1,9 @@
 # ─── Stage 1: Build ────────────────────────────────────────────
 FROM node:20-slim AS builder
 
+# Puppeteer가 빌드 중 Chromium을 다운로드하지 않도록 설정
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
 WORKDIR /app
 
 # 1. Install frontend dependencies and build
@@ -15,7 +18,7 @@ COPY backend/package*.json ./backend/
 RUN cd backend && npm ci
 
 COPY backend/ ./backend/
-RUN cd backend && npx prisma generate --schema=./backend/prisma/schema.prisma
+RUN cd backend && npx prisma generate
 RUN cd backend && npm run build
 
 # ─── Stage 2: Runtime ──────────────────────────────────────────
