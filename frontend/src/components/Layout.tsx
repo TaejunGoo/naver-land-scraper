@@ -13,9 +13,10 @@
  */
 import { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Building2, ChevronLeft } from 'lucide-react'
+import { Building2, ChevronLeft, LogOut } from 'lucide-react'
 import { useHeaderStore } from '../lib/store'
 import { Button } from './ui/button'
+import { useAuth } from '../hooks/useAuth'
 
 interface LayoutProps {
   children: ReactNode
@@ -24,6 +25,7 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const { title, actions, showBackButton } = useHeaderStore()
   const navigate = useNavigate()
+  const { logout } = useAuth()
 
   return (
     <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950">
@@ -65,6 +67,15 @@ export default function Layout({ children }: LayoutProps) {
 
           <div className="flex items-center gap-2">
             {actions}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={logout}
+              title="로그아웃"
+              className="h-9 w-9 rounded-full text-slate-500 hover:text-red-500 hover:bg-red-50"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </header>

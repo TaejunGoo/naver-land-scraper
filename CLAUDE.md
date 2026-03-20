@@ -14,6 +14,7 @@
 |------|------------|---------|
 | React Components | PascalCase | `ComplexCard.tsx` |
 | Route Files | camelCase + Routes suffix | `statsRoutes.ts` |
+| Middleware Files | camelCase + Middleware suffix | `authMiddleware.ts` |
 | UI Components (shadcn) | kebab-case | `alert-dialog.tsx` |
 | Utility Files | camelCase | `format.ts`, `constants.ts` |
 | Test Files | `.test.ts` / `.test.tsx` suffix | `ComplexCard.test.tsx` |
@@ -110,3 +111,48 @@ router.get("/:id", async (req, res) => {
 - Test files colocated with source files
 - Mock external dependencies with `vi.mock()`
 - Use `describe()` and `it()` with descriptive names
+
+### Authentication (Backend)
+
+- JWT Bearer token authentication via `authMiddleware.ts`
+- All `/api/*` routes (except `/api/auth/*`, `/api/health`, `/api/cron/*`) require a valid token
+- Tokens are stored in `localStorage` on the frontend (`auth_token` key)
+- Token expiry: 7 days
+- Password comparison uses `crypto.timingSafeEqual()` to prevent timing attacks
+- Login endpoint is rate-limited: 10 attempts per 15 minutes per IP
+
+```typescript
+// Protected route example
+app.use('/api/complexes', authMiddleware, complexRoutes)
+
+// Frontend: token is auto-attached via Axios interceptor in api.ts
+```
+
+### Security Guidelines
+
+- `express.json({ limit: '1mb' })` — prevent large payload attacks
+- Never compare passwords with `===`; use `timingSafeEqual()`
+- Numeric user inputs must be bounded: `Math.min(value, MAX_VALUE)`
+- Cron endpoints are protected by `CRON_SECRET` header, not JWT
+
+### Deployment (Railway)
+
+- Docker-based deployment using `Dockerfile` (multistage build)
+- SQLite DB persisted via Railway Volume mounted at `/app/data/`
+- `DATABASE_URL=file:/app/data/dev.db` in Railway Variables
+- `start.sh` initializes DB on first boot if not found
+- Auto-scraping via GitHub Actions (`.github/workflows/daily-scrape.yml`)
+- Serverless (App Sleeping) enabled to minimize cost (~$0.10/month)
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|:--------:|-------------|
+| `DATABASE_URL` | ✅ | Prisma DB path |
+| `DB_PATH` | ✅ | Raw DB file path (for backup routes) |
+| `ADMIN_USERNAME` | ✅ | Login username |
+| `ADMIN_PASSWORD` | ✅ | Login password |
+| `JWT_SECRET` | ✅ | JWT signing key (32+ random bytes) |
+| `CRON_SECRET` | ✅ | Cron endpoint auth key |
+| `CHROME_PATH` | Railway only | `/usr/bin/chromium` |
+| `PORT` | optional | Server port (default: 5500) |
