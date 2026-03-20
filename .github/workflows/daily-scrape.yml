@@ -7,10 +7,14 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    env:
+      RAILWAY_URL: ${{ secrets.RAILWAY_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
     steps:
       - name: Trigger scraping
         run: |
-          curl -X POST ${{ secrets.RAILWAY_URL }}/api/cron/scrape-all \
-            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+          curl -X POST "${RAILWAY_URL}/api/cron/scrape-all" \
+            -H "x-cron-secret: ${CRON_SECRET}" \
             -H "Content-Type: application/json" \
-            --max-time 600
+            --max-time 600 \
+            --fail-with-body
