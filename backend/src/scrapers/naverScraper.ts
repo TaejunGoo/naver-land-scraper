@@ -30,7 +30,7 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * - ignoreDefaultArgs: --enable-automation 플래그 제거 (감지 우회)
  */
 const LAUNCH_OPTIONS = {
-  headless: "new" as const,
+  headless: true as const,
   // Docker 환경의 시스템 Chromium 사용 (CHROME_PATH가 설정된 경우)
   ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}),
   args: [
@@ -41,8 +41,6 @@ const LAUNCH_OPTIONS = {
     "--disable-dev-shm-usage",
     "--disable-gpu",
     "--no-first-run",
-    "--no-zygote",
-    "--single-process",
   ],
   ignoreDefaultArgs: ["--enable-automation"],
 };

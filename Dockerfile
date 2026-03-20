@@ -31,13 +31,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     fonts-noto-cjk \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && echo "[Build] Chromium path: $(which chromium 2>/dev/null || which chromium-browser 2>/dev/null || echo 'NOT FOUND')" \
+    && (which chromium || which chromium-browser || (echo 'ERROR: Chromium not found!' && exit 1))
 
 # Set Puppeteer to use system Chromium instead of downloading its own
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
-    CHROME_PATH=/usr/bin/chromium \
+    PUPPETEER_SKIP_DOWNLOAD=true \
     NODE_ENV=production
+    # Note: CHROME_PATH is auto-detected at runtime in start.sh
 
 WORKDIR /app
 
